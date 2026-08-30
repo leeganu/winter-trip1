@@ -1,4 +1,4 @@
-const CACHE_NAME = "italy-trip-smallphone-v3";
+const CACHE_NAME = "winter-trip1-sync-smallphone-v4";
 const CORE = [
   "./",
   "./index.html",
