@@ -1,4 +1,4 @@
-const CACHE_NAME = "winter-trip1-sync-smallphone-v4";
+const CACHE_NAME = "winter-trip1-sync-loginfix-v5";
 const CORE = [
   "./",
   "./index.html",
