@@ -1,0 +1,2496 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#1f6b45" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="이탈리아 여행" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="96x96" href="./icons/favicon-96.png" />
+  <title>이탈리아 여행 계획</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  <style>
+    :root{
+      --bg:#f7f1e8;
+      --paper:#fffdfa;
+      --ink:#24303a;
+      --muted:#6d756f;
+      --line:#ddd3c6;
+      --green:#1f6b45;
+      --red:#b13b34;
+      --shadow:0 18px 42px rgba(39,33,26,.10);
+      --rowLabel:132px;
+      --dayW:78px;
+    }
+    *{box-sizing:border-box}
+
+    html{scroll-behavior:smooth}
+    body{
+      min-height:100dvh;
+      -webkit-tap-highlight-color:transparent;
+      overscroll-behavior-y:none;
+    }
+    button,a,input,select,textarea{touch-action:manipulation}
+    .install-btn{
+      background:#1f6b45;
+      border-color:#1f6b45;
+      color:white;
+    }
+    .network-banner{
+      position:fixed;
+      left:12px; right:12px; top:calc(8px + env(safe-area-inset-top));
+      z-index:9999;
+      background:#263238;
+      color:white;
+      padding:10px 14px;
+      border-radius:12px;
+      font-size:12px;
+      font-weight:800;
+      text-align:center;
+      box-shadow:0 10px 30px rgba(0,0,0,.18);
+    }
+    .tab-icon{display:none}
+    .city-collapse{display:none}
+    .mobile-only{display:none}
+
+    body{
+      margin:0;
+      background:
+        radial-gradient(circle at top left, rgba(31,107,69,.08), transparent 28%),
+        radial-gradient(circle at top right, rgba(177,59,52,.08), transparent 24%),
+        var(--bg);
+      color:var(--ink);
+      font-family:Inter,"Pretendard","Noto Sans KR",system-ui,sans-serif
+    }
+    button,input,textarea,select{font:inherit}
+    button{cursor:pointer}
+    .wrap{max-width:1480px;margin:auto;padding:24px}
+
+    .hero{
+      position:relative; overflow:hidden;
+      border-radius:28px; color:white; box-shadow:var(--shadow);
+      background:
+        linear-gradient(120deg, rgba(15,27,29,.82), rgba(15,27,29,.44)),
+        linear-gradient(135deg, #1f6b45 0%, #295844 34%, #8f4e34 68%, #b13b34 100%);
+      padding:34px 34px 28px;
+    }
+    .hero:before{
+      content:"ITALIA";
+      position:absolute; right:18px; top:8px;
+      font-size:100px; font-weight:900; letter-spacing:.14em;
+      opacity:.06; line-height:1;
+    }
+    .flag-line{
+      display:inline-flex; overflow:hidden; border-radius:999px;
+      border:1px solid rgba(255,255,255,.16); margin-bottom:12px
+    }
+    .flag-line span{display:block;width:46px;height:8px}
+    .flag-line .g{background:#1f6b45}
+    .flag-line .w{background:#f6f1e7}
+    .flag-line .r{background:#b13b34}
+    .eyebrow{font-size:12px;letter-spacing:.25em;opacity:.8;font-weight:900}
+    h1{font-size:38px;margin:10px 0 8px;letter-spacing:-.04em}
+    .hero-sub{max-width:760px;opacity:.82;line-height:1.55}
+    .love-note{
+      margin:20px auto 10px;
+      width:fit-content;
+      padding:10px 20px;
+      border-radius:999px;
+      background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.20);
+      font-weight:900;
+      letter-spacing:.02em;
+    }
+    .flight-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;margin-top:22px}
+    .flight{
+      background:rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.12);
+      padding:18px;border-radius:18px;
+      backdrop-filter: blur(6px);
+    }
+    .flight b{display:block;font-size:20px;margin-bottom:4px}
+    .flight small{opacity:.74}
+    .plane{font-size:25px;opacity:.7}
+    .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}
+    .pill{
+      background:rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.12);
+      padding:9px 13px;border-radius:999px;font-size:13px
+    }
+
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
+    .btn{
+      border:1px solid var(--line);
+      background:var(--paper);
+      color:var(--ink);
+      padding:10px 14px;border-radius:12px;font-weight:800;
+      transition:.15s transform,.15s box-shadow;
+    }
+    .btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(0,0,0,.06)}
+    .btn.primary{background:var(--red);border-color:var(--red);color:white}
+    .btn.dark{background:var(--green);border-color:var(--green);color:white}
+    .btn.ghost{background:transparent}
+
+    .tabs{display:flex;gap:8px;overflow:auto;padding-bottom:3px}
+    .tab{
+      border:none;background:#e8dfd2;padding:11px 15px;border-radius:12px;
+      font-weight:900;white-space:nowrap;color:#5b5248
+    }
+    .tab.active{background:var(--green);color:white}
+    .panel{display:none;margin-top:16px}
+    .panel.active{display:block}
+
+    .section-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:20px 2px 12px}
+    .section-head h2{font-size:24px;margin:0;letter-spacing:-.03em}
+    .section-head p{margin:5px 0 0;color:var(--muted);font-size:13px}
+
+    .city-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    .city-card{
+      background:var(--paper);
+      border:1px solid var(--line);
+      border-radius:22px;
+      box-shadow:0 10px 32px rgba(35,37,34,.05);
+      overflow:hidden;
+      position:relative;
+    }
+    .city-card:before{
+      content:"";
+      position:absolute; left:0; top:0; right:0; height:7px;
+      background:var(--cityColor, linear-gradient(90deg, var(--green), #ece6da, var(--red)));
+    }
+    .city-top{
+      padding:20px 18px 14px;
+      border-bottom:1px solid #efe7dc;
+      display:flex;gap:10px;align-items:center;
+      background:linear-gradient(180deg, #fffdfb, #f9f4ec);
+    }
+    .city-chip{
+      width:14px;height:14px;border-radius:999px;flex:0 0 14px;background:var(--cityColor,#999);
+      border:1px solid rgba(0,0,0,.06)
+    }
+    .city-top input.city-name{
+      font-size:24px;font-weight:900;border:none;background:transparent;
+      min-width:0;width:100%;color:var(--ink)
+    }
+    .city-top input.city-name:focus{outline:none}
+    .city-meta{padding:0 18px 15px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .field{display:flex;flex-direction:column;gap:5px}
+    .field label{font-size:11px;color:var(--muted);font-weight:900}
+    input,textarea,select{
+      border:1px solid var(--line);background:white;border-radius:10px;
+      padding:9px 10px;color:var(--ink)
+    }
+    textarea{resize:vertical;min-height:74px}
+    .buckets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:0 18px 18px}
+    .bucket{
+      border:1px solid #e7ddcf;border-radius:15px;padding:12px;background:#fff;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.55)
+    }
+    .bucket h3{font-size:13px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
+    .bucket h3 span{font-size:16px}
+    .item-row{display:flex;gap:7px;align-items:flex-start;margin:6px 0}
+    .place-links{
+      display:flex;
+      gap:4px;
+      flex:0 0 auto;
+      margin-top:1px;
+    }
+    .place-link{
+      width:28px;
+      height:28px;
+      border-radius:8px;
+      border:1px solid #e5dacd;
+      background:#faf7f2;
+      color:#544c45;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      text-decoration:none;
+      font-size:13px;
+      transition:.15s transform,.15s background;
+    }
+    .place-link:hover{
+      transform:translateY(-1px);
+      background:#f0e9df;
+    }
+    .item-row.has-links .item-text{min-width:0}
+
+    .item-row input[type="checkbox"]{margin-top:4px}
+    .item-text{
+      border:none;border-bottom:1px dashed #ddd4c8;border-radius:0;padding:3px 1px;
+      width:100%;background:transparent
+    }
+    .item-text:focus{outline:none;border-bottom-color:var(--red)}
+    .mini{
+      border:none;background:#f2ede5;border-radius:8px;width:32px;height:32px;
+      font-weight:900;color:#6b665f
+    }
+    .mini.danger{color:#a64031}
+    .notes{padding:0 18px 18px}
+    .empty{
+      border:2px dashed #d7d0c5;border-radius:18px;padding:36px;text-align:center;
+      color:var(--muted);background:rgba(255,255,255,.4)
+    }
+
+    .timeline{display:grid;gap:10px}
+    .day{
+      display:grid;grid-template-columns:120px 170px 1fr;gap:12px;
+      background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:13px;align-items:start
+    }
+    .date b{display:block}
+    .date span{font-size:12px;color:var(--muted)}
+    .day-city input{width:100%;font-weight:800}
+    .events{display:grid;gap:7px}
+    .event{display:grid;grid-template-columns:78px 112px 1fr auto;gap:7px}
+    .event input,.event select{padding:8px}
+    .event .remove{border:none;background:#f2ece5;border-radius:9px;width:36px}
+    .add-event{
+      border:1px dashed #cfc7ba;background:transparent;border-radius:9px;padding:7px;
+      color:var(--muted);font-weight:800
+    }
+
+    .flow-card{
+      background:var(--paper);
+      border:1px solid var(--line);
+      border-radius:20px;
+      padding:16px;
+      margin-bottom:16px;
+      box-shadow:0 10px 28px rgba(35,37,34,.05);
+    }
+    .flow-title{font-size:15px;font-weight:900;margin-bottom:12px}
+    .flow-strip{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      overflow-x:auto;
+      padding:4px 2px 10px;
+    }
+    .flow-place{
+      min-width:132px;
+      border-radius:14px;
+      padding:12px 14px;
+      color:white;
+      text-align:center;
+      font-weight:900;
+      white-space:nowrap;
+      box-shadow:0 7px 16px rgba(0,0,0,.10);
+    }
+    .flow-place small{display:block;margin-top:4px;font-size:11px;font-weight:700;opacity:.88}
+    .flow-place.rome{background:#c64d4d}
+    .flow-place.tuscany{background:#2d8f78;min-width:170px}
+    .flow-place.venice{background:#5379c2}
+    .flow-place.slovenia{background:#d28a34}
+    .flow-arrow{
+      min-width:76px;
+      text-align:center;
+      color:#59524a;
+      position:relative;
+      flex:0 0 auto;
+    }
+    .flow-arrow:before{
+      content:"";
+      position:absolute;
+      left:-5px;right:-5px;top:14px;
+      height:1px;background:#cfc3b4;z-index:0;
+    }
+    .flow-arrow b,.flow-arrow span{position:relative;z-index:1;background:var(--paper)}
+    .flow-arrow b{display:inline-block;padding:0 6px;font-size:18px}
+    .flow-arrow span{display:block;font-size:10px;font-weight:800;margin-top:4px;padding:0 3px}
+    .flow-note{font-size:12px;color:var(--muted);padding-top:8px;border-top:1px solid #eee3d5;line-height:1.5}
+
+    .route-transport{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-top:8px;
+      padding:8px 10px;
+      border-radius:10px;
+      background:#f7f2eb;
+      border:1px solid #eadfce;
+      font-size:12px;
+    }
+    .route-transport .mode-icon{font-size:18px}
+    .route-transport .mode-name{font-weight:900}
+    .route-transport .mode-detail{color:var(--muted);margin-left:auto;text-align:right}
+    .map-legend{
+      display:flex;gap:10px;flex-wrap:wrap;margin:0 0 10px;font-size:11px;color:var(--muted)
+    }
+    .map-legend span{display:inline-flex;align-items:center;gap:4px}
+    .legend-line{width:22px;height:4px;border-radius:4px;display:inline-block}
+    .legend-train{background:#5379c2}
+    .legend-car{background:#2d8f78}
+    .legend-bus{background:#d28a34}
+    .legend-flight{background:#8a5ccf}
+
+    .map-grid{display:grid;grid-template-columns:1.4fr .9fr;gap:16px}
+    .map-card,.route-card,.bar-card,.sheet{
+      background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:16px;
+      box-shadow:0 10px 28px rgba(35,37,34,.05)
+    }
+    #map{height:560px;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:#f5f1ea}
+    .route-meta{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px
+    }
+    .meta-box{
+      background:#faf6f0;border:1px solid #eadfce;border-radius:14px;padding:12px
+    }
+    .meta-box .k{font-size:12px;color:var(--muted);font-weight:800;margin-bottom:4px}
+    .meta-box .v{font-size:20px;font-weight:900}
+    .route-list{display:grid;gap:10px}
+    .route-step{
+      border:1px solid #eadfce;border-radius:14px;padding:12px;background:#fff
+    }
+    .route-step-top{
+      display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:6px
+    }
+    .route-step-num{
+      width:28px;height:28px;border-radius:999px;background:var(--green);color:white;
+      display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:13px
+    }
+    .route-city{font-weight:900}
+    .route-dates{font-size:12px;color:var(--muted)}
+    .route-leg{
+      margin-top:7px;padding-top:7px;border-top:1px dashed #e5dacb;font-size:13px;color:#554d45
+    }
+    .map-help,.bar-help{
+      font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5
+    }
+    .badge-warn{
+      display:inline-block;
+      padding:3px 8px;
+      background:#fff2ef;
+      color:#9b473d;
+      border:1px solid #efc9c1;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:800;
+    }
+
+    .bar-meta{
+      display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px
+    }
+    .bar-meta .mini-pill{
+      background:#faf6f0;border:1px solid #eadfce;border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800
+    }
+    .bar-board-wrap{
+      overflow:auto;
+      border:1px solid #eadfce;
+      border-radius:16px;
+      background:#fff;
+    }
+    .bar-board{
+      min-width:calc(var(--rowLabel) + (14 * var(--dayW)));
+      width:max-content;
+      padding:14px;
+    }
+    .bar-head{
+      display:grid;
+      grid-template-columns:var(--rowLabel) repeat(14, var(--dayW));
+      gap:0;
+      position:sticky;
+      top:0;
+      z-index:2;
+      background:#fff;
+    }
+    .bar-head .blank{
+      border-right:1px solid #eee2d0;
+      background:#fff;
+    }
+    .bar-date{
+      text-align:center;
+      padding:8px 4px 10px;
+      border-left:1px solid #f0e5d7;
+      border-bottom:1px solid #eee2d0;
+      font-size:12px;
+      font-weight:800;
+      color:#5a544d;
+      background:#fffdfa;
+    }
+    .bar-date small{display:block;font-weight:700;color:#8a8378;margin-top:2px}
+    .bar-row{
+      display:grid;
+      grid-template-columns:var(--rowLabel) 1fr;
+      min-height:62px;
+    }
+    .bar-row.region-row{min-height:74px}
+    .bar-row.transport-row{min-height:48px}
+    .bar-row.transport-row .bar-grid{min-height:48px}
+    .bar-row.transport-row .bar-row-label{font-size:12px;color:var(--muted)}
+    .region-bar{
+      position:absolute;
+      top:12px;
+      height:42px;
+      border-radius:12px;
+      color:white;
+      display:flex;
+      align-items:center;
+      overflow:hidden;
+      box-shadow:0 8px 18px rgba(0,0,0,.12);
+      user-select:none;
+    }
+    .region-bar .region-title{
+      position:absolute;
+      left:12px;
+      z-index:3;
+      font-weight:900;
+      font-size:13px;
+      text-shadow:0 1px 2px rgba(0,0,0,.18);
+      pointer-events:none;
+    }
+    .region-segment{
+      height:100%;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      padding:0 5px 5px;
+      border-right:1px solid rgba(255,255,255,.35);
+      font-size:10px;
+      font-weight:800;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      background:rgba(255,255,255,.10);
+    }
+    .region-segment:nth-child(even){background:rgba(0,0,0,.06)}
+    .transport-bar{
+      position:absolute;
+      top:10px;
+      height:26px;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:0 12px;
+      background:#39424a;
+      color:white;
+      font-size:12px;
+      font-weight:900;
+      box-shadow:0 5px 12px rgba(0,0,0,.12);
+      white-space:nowrap;
+    }
+    .bar-row-label{
+      padding:12px 10px;
+      border-right:1px solid #eee2d0;
+      border-bottom:1px solid #f3eadf;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:900;
+      background:#fffdfa;
+      position:sticky;
+      left:0;
+      z-index:1;
+    }
+    .bar-row-label .dot{
+      width:12px;height:12px;border-radius:999px;background:var(--cityColor,#999)
+    }
+    .bar-grid{
+      position:relative;
+      border-bottom:1px solid #f3eadf;
+      background:
+        repeating-linear-gradient(
+          to right,
+          transparent 0,
+          transparent calc(var(--dayW) - 1px),
+          #f2e7d8 calc(var(--dayW) - 1px),
+          #f2e7d8 var(--dayW)
+        );
+      min-height:62px;
+    }
+    .bar-track{
+      position:absolute; inset:0;
+    }
+    .city-bar{
+      position:absolute;
+      top:12px;
+      height:38px;
+      border-radius:12px;
+      color:white;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:900;
+      letter-spacing:-.02em;
+      cursor:grab;
+      box-shadow:0 8px 18px rgba(0,0,0,.12);
+      user-select:none;
+      touch-action:none;
+      overflow:hidden;
+    }
+    .city-bar.dragging{cursor:grabbing; opacity:.92}
+    .city-bar .bar-label{
+      pointer-events:none;
+      white-space:nowrap;
+      font-size:13px;
+      text-shadow:0 1px 2px rgba(0,0,0,.18);
+      padding:0 12px;
+    }
+    .bar-handle{
+      position:absolute;
+      top:0; bottom:0;
+      width:12px;
+      background:rgba(255,255,255,.25);
+      border-left:1px solid rgba(255,255,255,.24);
+      border-right:1px solid rgba(255,255,255,.24);
+    }
+    .bar-handle.left{left:0; cursor:ew-resize}
+    .bar-handle.right{right:0; cursor:ew-resize}
+    .bar-row-empty{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#9b9388;
+      font-size:12px;
+      font-weight:700;
+      pointer-events:none;
+    }
+
+    .reserv-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .sheet h3{margin:0 0 12px}
+    .table{display:grid;gap:8px}
+    .res-row{display:grid;grid-template-columns:110px 1.2fr 1fr 110px auto;gap:7px}
+    .money-row{display:grid;grid-template-columns:1.1fr 1fr 130px auto;gap:7px}
+    .total{
+      margin-top:12px;padding-top:12px;border-top:1px solid var(--line);
+      font-size:20px;font-weight:900;text-align:right
+    }
+
+    .footer{color:var(--muted);text-align:center;font-size:12px;padding:22px}
+    dialog{border:none;border-radius:18px;box-shadow:var(--shadow);padding:0;max-width:460px;width:calc(100% - 32px)}
+    dialog::backdrop{background:rgba(15,20,22,.45)}
+    .modal{padding:20px}
+    .modal h3{margin-top:0}
+    .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+    .hidden-file{display:none}
+
+    @media(max-width:1100px){
+      .map-grid{grid-template-columns:1fr}
+    }
+    @media(max-width:900px){
+      .city-grid,.reserv-grid{grid-template-columns:1fr}
+      .day{grid-template-columns:92px 1fr}
+      .events{grid-column:1/-1}
+      .flight-grid{grid-template-columns:1fr}
+      .plane{display:none}
+      :root{ --rowLabel:110px; --dayW:68px; }
+    }
+    @media(max-width:640px){
+      .wrap{padding:14px}
+      .hero{padding:22px;border-radius:22px}
+      h1{font-size:30px}
+      .buckets{grid-template-columns:1fr}
+      .city-meta{grid-template-columns:1fr}
+      .event{grid-template-columns:72px 95px 1fr}
+      .event .remove{grid-column:3;justify-self:end}
+      .res-row{grid-template-columns:1fr 1fr}
+      .money-row{grid-template-columns:1fr 1fr}
+      .route-meta{grid-template-columns:1fr}
+      #map{height:420px}
+      :root{ --rowLabel:96px; --dayW:62px; }
+      .city-bar .bar-label{font-size:12px}
+    }
+
+
+    .sync-btn{background:#eef5f1;border-color:#cfe0d6;color:#1f6b45}
+    .sync-status-pill{transition:.2s background,.2s border-color}
+    .sync-status-pill.live{background:rgba(31,107,69,.30);border-color:rgba(255,255,255,.32)}
+    .sync-status-pill.syncing{background:rgba(210,138,52,.30)}
+    .sync-modal{padding:18px}
+    .sync-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .sync-modal-head h3{margin:3px 0 0;font-size:22px}
+    .sync-eyebrow{color:#1f6b45;opacity:1}
+    .sync-desc,.sync-help{font-size:12px;color:var(--muted);line-height:1.55}
+    .sync-wide{width:100%;margin-top:10px}
+    .sync-user-card,.sync-connected{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#f7f2eb;border:1px solid #eadfce;border-radius:14px;padding:12px;margin-bottom:12px}
+    .sync-user-card small,.sync-connected small,.invite-card small{display:block;color:var(--muted);font-size:10px;margin-bottom:3px}
+    .sync-user-card b,.sync-connected b{font-size:13px}
+    .sync-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .sync-choice{border:1px solid #e6dbcd;background:#fffdfa;border-radius:15px;padding:14px 11px;min-height:138px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;color:var(--ink)}
+    .sync-choice>span{font-size:24px;color:#1f6b45}.sync-choice b{font-size:13px}.sync-choice small{font-size:10px;color:var(--muted)}
+    .join-choice input{width:100%;text-transform:uppercase;text-align:center;letter-spacing:.12em;font-weight:900}
+    .join-choice .btn{width:100%;padding:8px}
+    .sync-live{color:#1f6b45;font-size:11px;font-weight:900}
+    .invite-card{padding:13px;border:1px dashed #c7b9a7;border-radius:14px;margin-bottom:10px;background:#fff}
+    .invite-code-row{display:flex;align-items:center;gap:8px;margin-top:5px}
+    .invite-code-row strong{flex:1;font-size:26px;letter-spacing:.14em;color:#1f6b45}
+    @media(max-width:720px){.sync-choice-grid{grid-template-columns:1fr}.sync-choice{min-height:112px}.sync-modal{padding:15px}.invite-code-row strong{font-size:22px}}
+
+    @media(max-width:720px){
+      :root{ --rowLabel:92px; --dayW:56px; }
+      body{padding-bottom:calc(78px + env(safe-area-inset-bottom))}
+      .wrap{
+        padding:10px 10px 18px;
+        max-width:none;
+      }
+      .hero{
+        border-radius:20px;
+        padding:18px 16px 16px;
+        box-shadow:0 10px 26px rgba(39,33,26,.10);
+      }
+      .hero:before{font-size:62px;right:-4px;top:14px}
+      .eyebrow{font-size:10px}
+      h1{font-size:27px;margin:7px 0 2px}
+      .hero-sub{display:none}
+      .love-note{
+        margin:11px auto 8px;
+        padding:7px 14px;
+        font-size:13px;
+      }
+      .flight-grid{
+        grid-template-columns:1fr 1fr;
+        gap:8px;
+        margin-top:12px;
+      }
+      .flight{
+        padding:11px 10px;
+        border-radius:13px;
+      }
+      .flight b{font-size:14px;margin-bottom:2px}
+      .flight small{font-size:11px;line-height:1.35;display:block}
+      .plane{display:none}
+      .stats{
+        margin-top:10px;
+        gap:6px;
+        flex-wrap:nowrap;
+        overflow-x:auto;
+        scrollbar-width:none;
+        padding-bottom:2px;
+      }
+      .stats::-webkit-scrollbar{display:none}
+      .pill{
+        flex:0 0 auto;
+        padding:7px 9px;
+        font-size:11px;
+      }
+
+      .toolbar{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:7px;
+        margin:10px 0 14px;
+      }
+      .toolbar .btn{
+        min-height:46px;
+        padding:9px 8px;
+        border-radius:13px;
+        font-size:13px;
+      }
+      .toolbar .btn:nth-of-type(n+3){font-size:12px}
+
+      .tabs{
+        position:fixed;
+        left:8px; right:8px;
+        bottom:calc(8px + env(safe-area-inset-bottom));
+        z-index:3000;
+        display:grid;
+        grid-template-columns:repeat(5,1fr);
+        gap:3px;
+        padding:5px;
+        border-radius:19px;
+        background:rgba(255,253,250,.94);
+        box-shadow:0 12px 34px rgba(30,35,31,.22);
+        border:1px solid rgba(210,200,188,.9);
+        backdrop-filter:blur(16px);
+        overflow:visible;
+      }
+      .tab{
+        min-width:0;
+        min-height:54px;
+        padding:6px 3px;
+        border-radius:14px;
+        background:transparent;
+        color:#736b62;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        align-items:center;
+        gap:2px;
+        font-size:10px;
+      }
+      .tab.active{
+        background:#1f6b45;
+        color:white;
+        box-shadow:0 5px 14px rgba(31,107,69,.22);
+      }
+      .tab-icon{display:block;font-size:18px;line-height:1}
+      .tab-label{display:block;font-weight:900}
+
+      .panel{margin-top:6px}
+      .section-head{
+        margin:13px 2px 9px;
+        align-items:center;
+      }
+      .section-head h2{font-size:20px}
+      .section-head p{font-size:11px;margin-top:2px}
+
+      .bar-card,.map-card,.route-card,.flow-card,.sheet{
+        border-radius:16px;
+        padding:11px;
+      }
+      .bar-meta{gap:5px;margin-bottom:8px}
+      .bar-meta .mini-pill{padding:6px 9px;font-size:11px}
+      .bar-board-wrap{
+        border-radius:13px;
+        -webkit-overflow-scrolling:touch;
+      }
+      .bar-board{padding:8px}
+      .bar-head{grid-template-columns:var(--rowLabel) repeat(14,var(--dayW))}
+      .bar-row{grid-template-columns:var(--rowLabel) 1fr}
+      .bar-row-label{
+        padding:8px 6px;
+        font-size:11px;
+        gap:6px;
+      }
+      .region-bar .region-title{font-size:11px;left:8px}
+      .region-segment{font-size:9px}
+      .transport-bar{font-size:10px;padding:0 7px}
+      .bar-help{font-size:10px}
+
+      .city-grid{grid-template-columns:1fr;gap:10px}
+      .city-card{border-radius:17px}
+      .city-top{padding:16px 11px 10px;gap:7px}
+      .city-top input.city-name{font-size:20px}
+      .city-chip{width:11px;height:11px;flex-basis:11px}
+      .city-collapse{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        border:none;
+        width:36px;height:36px;
+        border-radius:10px;
+        background:#eee8df;
+        color:#605a53;
+        font-weight:900;
+      }
+      .city-card.mobile-collapsed .city-body{display:none}
+      .city-card.mobile-collapsed .city-collapse{transform:rotate(180deg)}
+      .city-meta{grid-template-columns:1fr 1fr;padding:0 11px 10px;gap:6px}
+      .city-meta input{width:100%;font-size:12px;padding:8px 6px}
+      .buckets{
+        grid-template-columns:1fr;
+        gap:8px;
+        padding:0 10px 10px;
+      }
+      .bucket{padding:10px;border-radius:13px}
+      .bucket h3{font-size:12px}
+      .item-row{
+        align-items:center;
+        gap:5px;
+        margin:7px 0;
+      }
+      .item-row input[type="checkbox"]{
+        width:19px;height:19px;margin:0;
+        flex:0 0 19px;
+      }
+      .item-text{font-size:13px;min-height:34px}
+      .place-links{gap:3px}
+      .place-link{width:34px;height:34px;font-size:14px}
+      .mini{width:34px;height:34px}
+      .add-event{min-height:38px}
+      .notes{padding:0 11px 12px}
+      textarea{min-height:70px;font-size:13px}
+
+      .timeline{gap:8px}
+      .day{
+        grid-template-columns:1fr;
+        gap:8px;
+        padding:11px;
+        border-radius:15px;
+      }
+      .date{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:8px;
+      }
+      .date b{font-size:14px}
+      .date span{font-size:10px;text-align:right}
+      .day-city{grid-column:auto}
+      .day-city input{min-height:42px;font-size:13px}
+      .events{grid-column:auto;gap:8px}
+      .event{
+        grid-template-columns:82px 1fr 38px;
+        gap:6px;
+        background:#faf6f0;
+        border:1px solid #eee2d4;
+        border-radius:12px;
+        padding:7px;
+      }
+      .event input,.event select{min-width:0;font-size:12px;padding:8px}
+      .event input[type="time"]{grid-column:1}
+      .event select{grid-column:2}
+      .event input:not([type="time"]){
+        grid-column:1/3;
+        grid-row:2;
+      }
+      .event .remove{
+        grid-column:3;
+        grid-row:1/3;
+        width:38px;
+        height:100%;
+      }
+
+      .flow-strip{
+        gap:5px;
+        padding-bottom:6px;
+        -webkit-overflow-scrolling:touch;
+      }
+      .flow-place{
+        min-width:112px;
+        padding:9px 10px;
+        font-size:12px;
+      }
+      .flow-place.tuscany{min-width:145px}
+      .flow-arrow{min-width:62px}
+      .flow-arrow b{font-size:15px}
+      .flow-arrow span{font-size:9px}
+      .flow-note{font-size:10px}
+      .map-grid{grid-template-columns:1fr;gap:10px}
+      #map{height:55vh;min-height:360px;border-radius:13px}
+      .route-meta{grid-template-columns:repeat(3,1fr);gap:5px}
+      .meta-box{padding:8px;border-radius:11px}
+      .meta-box .k{font-size:9px}
+      .meta-box .v{font-size:15px}
+      .route-step{padding:9px}
+      .route-transport{font-size:10px;gap:5px}
+      .route-transport .mode-detail{font-size:9px}
+
+      .reserv-grid{grid-template-columns:1fr;gap:10px}
+      .sheet h3{font-size:16px}
+      .res-row,.money-row{
+        grid-template-columns:1fr 1fr;
+        gap:6px;
+        padding:8px;
+        border:1px solid #eee2d4;
+        border-radius:12px;
+        background:#faf7f2;
+      }
+      .res-row select,.res-row input,.money-row select,.money-row input{
+        width:100%;
+        min-width:0;
+        font-size:12px;
+      }
+      .res-row .mini,.money-row .mini{
+        grid-column:2;
+        justify-self:end;
+      }
+      .total{font-size:17px}
+
+      dialog{
+        width:calc(100% - 18px);
+        border-radius:18px;
+      }
+      .modal{padding:16px}
+      .modal input{min-height:44px}
+      .modal-actions .btn{min-height:44px}
+
+      .footer{padding:15px 0 6px;font-size:10px}
+    }
+
+
+    .mobile-tripline{display:none}
+    .manage-menu{position:relative}
+    .manage-menu summary{list-style:none}
+    .manage-menu summary::-webkit-details-marker{display:none}
+    .manage-popover{display:flex;gap:7px;flex-wrap:wrap}
+    .mobile-journey{display:none}
+    .full-bar-details>summary{cursor:pointer;font-weight:900;color:var(--green);padding:10px 2px}
+    .city-range{display:none}
+
+    @media(max-width:720px){
+      body{background:#f4f1ec}
+      .wrap{padding:8px 9px 14px}
+
+      .hero{
+        padding:14px 14px 13px;
+        border-radius:17px;
+        background:linear-gradient(135deg,#1f6b45,#315e49 60%,#82473b);
+      }
+      .hero:before,.flag-line,.flight-grid,.love-note{display:none}
+      .eyebrow{font-size:9px;letter-spacing:.16em;opacity:.75}
+      h1{font-size:23px;margin:4px 0 3px}
+      .mobile-tripline{display:flex;align-items:center;gap:7px;font-size:11px;opacity:.86;font-weight:800}
+      .mobile-tripline span{opacity:.65}
+      .stats{margin-top:9px;gap:5px}
+      .stats .pill{display:none}
+      .stats #dday,.stats #syncStatusPill{display:block;padding:6px 8px;font-size:10px}
+
+      .compact-toolbar{display:grid;grid-template-columns:1fr auto;gap:7px;margin:8px 0 9px;position:relative}
+      .compact-toolbar>.sync-btn{min-height:42px}
+      .manage-menu{position:relative}
+      .manage-menu>summary{min-height:42px;display:flex;align-items:center;justify-content:center;padding:8px 12px;background:#fff}
+      .manage-menu[open] .manage-popover{display:grid}
+      .manage-popover{
+        display:none;
+        position:absolute;
+        z-index:3500;
+        right:0;
+        top:48px;
+        width:min(250px,calc(100vw - 20px));
+        grid-template-columns:1fr 1fr;
+        gap:6px;
+        padding:8px;
+        background:#fffdfa;
+        border:1px solid var(--line);
+        border-radius:14px;
+        box-shadow:0 16px 40px rgba(0,0,0,.16);
+      }
+      .manage-popover .btn{min-height:40px;padding:8px 7px;font-size:11px}
+      .manage-popover .ghost{grid-column:1/-1}
+
+      .tabs{left:7px;right:7px;bottom:calc(7px + env(safe-area-inset-bottom));padding:4px;border-radius:17px}
+      .tab{min-height:49px;font-size:9px;border-radius:12px;gap:1px}
+      .tab-icon{font-size:17px}
+
+      .panel{margin-top:3px}
+      .section-head{margin:9px 2px 7px}
+      .section-head h2{font-size:18px}
+      .section-head p{font-size:10px}
+
+      .mobile-journey{display:grid;gap:7px}
+      .journey-card{
+        position:relative;
+        display:grid;
+        grid-template-columns:62px 1fr;
+        gap:8px;
+        padding:11px 11px 10px 14px;
+        background:#fff;
+        border:1px solid #e5ddd2;
+        border-radius:14px;
+        box-shadow:0 4px 14px rgba(35,37,34,.04);
+        overflow:hidden;
+      }
+      .journey-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:#999}
+      .journey-card.rome:before{background:#c64d4d}
+      .journey-card.tuscany:before{background:#2d8f78}
+      .journey-card.venice:before{background:#5379c2}
+      .journey-card.slovenia:before{background:#d28a34}
+      .journey-date{font-size:11px;font-weight:900;color:#5f5a54;padding-top:2px}
+      .journey-main b{display:block;font-size:15px;letter-spacing:-.02em}
+      .journey-main small{display:block;margin-top:3px;font-size:10px;line-height:1.42;color:#777067}
+      .journey-next{grid-column:2;font-size:10px;color:#5f6c65;font-weight:800;padding-top:6px;border-top:1px dashed #ece4d9}
+      .full-bar-details{margin-top:7px}
+      .full-bar-details>summary{font-size:11px;text-align:center;color:#756d63;padding:8px}
+      .full-bar-details:not([open]) .bar-card{display:none}
+      .bar-card{padding:8px}
+
+      .city-grid{gap:7px}
+      .city-card{border-radius:14px;box-shadow:none}
+      .city-card:before{height:4px}
+      .city-top{padding:11px 9px 8px}
+      .city-top input.city-name{font-size:17px}
+      .city-range{display:inline-block;white-space:nowrap;font-size:9px;color:#81786d;font-weight:800;background:#f1ece5;border-radius:999px;padding:5px 7px}
+      .city-collapse{width:31px;height:31px;border-radius:9px}
+      .city-top>.mini.danger{display:none}
+      .city-meta{padding:0 9px 8px}
+      .city-meta .field label{font-size:9px}
+      .city-meta input{min-height:34px;padding:6px;font-size:11px}
+      .buckets{gap:6px;padding:0 8px 8px}
+      .bucket{padding:8px;border-radius:11px}
+      .bucket h3{font-size:11px;margin-bottom:5px}
+      .item-row{margin:5px 0}
+      .item-text{font-size:12px;min-height:31px}
+      .place-link,.mini{width:31px;height:31px}
+      .notes{padding:0 9px 9px}
+
+      .day{padding:9px;border-radius:13px;gap:6px}
+      .date b{font-size:13px}
+      .day-city input{min-height:38px}
+      .event{padding:6px;grid-template-columns:72px 1fr 34px}
+      .event .remove{width:34px}
+
+      #map{height:48vh;min-height:300px}
+      .flow-card{display:none}
+      .map-card,.route-card,.sheet{padding:9px;border-radius:14px}
+      .map-legend{font-size:9px;gap:7px}
+      .route-meta{display:none}
+      .route-step{padding:8px;border-radius:11px}
+
+      .reserv-grid{gap:7px}
+      .res-row,.money-row{padding:7px;border-radius:10px}
+
+      dialog{width:calc(100% - 12px);border-radius:15px}
+      .modal{padding:13px}
+    }
+
+    @media print{
+      body{background:white}
+      .toolbar,.tabs,.mini,.add-event,.remove{display:none!important}
+      .panel{display:block!important}
+      .wrap{max-width:none;padding:0}
+      .hero{box-shadow:none}
+      .city-card,.sheet,.day,.route-card,.map-card,.bar-card{break-inside:avoid}
+      #map{height:420px}
+      .bar-board-wrap{overflow:visible}
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div id="networkBanner" class="network-banner" hidden>오프라인 상태입니다. 저장된 계획은 볼 수 있지만 지도·외부 링크는 인터넷 연결이 필요합니다.</div>
+<div class="wrap">
+  <section class="hero">
+    <div class="flag-line"><span class="g"></span><span class="w"></span><span class="r"></span></div>
+    <div class="eyebrow">ITALY · SLOVENIA 2027</div>
+    <h1>우리의 겨울 여행</h1>
+    <div class="hero-sub">로마 · 피렌체 · 토스카나 · 베네치아 · 슬로베니아</div>
+    <div class="mobile-tripline">1/21 로마 IN <span>→</span> 2/3 로마 OUT</div>
+
+    <div class="love-note">둘이 천천히, 오래 기억할 여행</div>
+
+    <div class="flight-grid">
+      <div class="flight">
+        <b>1/21 11:00 인천 출발</b>
+        <small>1/21 17:00 로마 도착</small>
+      </div>
+      <div class="plane">✈</div>
+      <div class="flight">
+        <b>2/3 07:00 로마 출발</b>
+        <small>2/4 02:50 인천 도착</small>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="pill">여행 기간 <strong>13박 14일</strong></div>
+      <div class="pill">현지 일정 <strong>1/21 ~ 2/3</strong></div>
+      <div class="pill" id="dday">출발일까지 계산 중…</div>
+      <div class="pill" id="cityCount">도시 0곳</div>
+      <div class="pill sync-status-pill" id="syncStatusPill">☁️ 로컬 저장</div>
+    </div>
+  </section>
+
+  <div class="toolbar compact-toolbar">
+    <button class="btn sync-btn" id="syncBtn" type="button">☁️ 동기화</button>
+    <details class="manage-menu">
+      <summary class="btn">⋯ 관리</summary>
+      <div class="manage-popover">
+        <button class="btn install-btn" id="installBtn" type="button">📲 앱 설치</button>
+        <button class="btn primary" onclick="openCityDialog()">＋ 도시 추가</button>
+        <button class="btn" onclick="exportData()">내보내기</button>
+        <button class="btn" onclick="document.getElementById('importFile').click()">불러오기</button>
+        <button class="btn dark" onclick="window.print()">인쇄 / PDF</button>
+        <button class="btn ghost" onclick="resetAll()">전체 초기화</button>
+      </div>
+    </details>
+    <input class="hidden-file" id="importFile" type="file" accept=".json" onchange="importData(event)">
+  </div>
+
+  <div class="tabs" aria-label="주요 메뉴">
+    <button class="tab active" data-tab="bars"><span class="tab-icon">🗓️</span><span class="tab-label">여정</span></button>
+    <button class="tab" data-tab="cities"><span class="tab-icon">📌</span><span class="tab-label">도시</span></button>
+    <button class="tab" data-tab="days"><span class="tab-icon">☀️</span><span class="tab-label">일정</span></button>
+    <button class="tab" data-tab="mapPanel"><span class="tab-icon">🗺️</span><span class="tab-label">동선</span></button>
+    <button class="tab" data-tab="reservations"><span class="tab-icon">🎫</span><span class="tab-label">예약</span></button>
+  </div>
+
+  <section id="bars" class="panel active">
+    <div class="section-head">
+      <div><h2>전체 여정</h2><p>날짜와 이동만 빠르게 확인</p></div>
+    </div>
+
+    <div class="mobile-journey">
+      <article class="journey-card rome">
+        <div class="journey-date">1/21–1/24</div>
+        <div class="journey-main"><b>로마</b><small>3박 · 도착 후 구시가지, 고대 로마, 바티칸</small></div>
+        <div class="journey-next">🚄 피렌체</div>
+      </article>
+      <article class="journey-card tuscany">
+        <div class="journey-date">1/24–1/29</div>
+        <div class="journey-main"><b>피렌체 · 토스카나</b><small>피렌체 3박 → 산지미냐노 → 시에나 → 아시아노 → 피엔차 · White Whale</small></div>
+        <div class="journey-next">🚗 아레초 반납 → 🚄 베네치아</div>
+      </article>
+      <article class="journey-card venice">
+        <div class="journey-date">1/29</div>
+        <div class="journey-main"><b>베네치아</b><small>오후 반나절 · 리알토 · 산마르코</small></div>
+        <div class="journey-next">🚌 류블랴나</div>
+      </article>
+      <article class="journey-card slovenia">
+        <div class="journey-date">1/29–2/1</div>
+        <div class="journey-main"><b>슬로베니아</b><small>류블랴나 3박 · 블레드 · 프레드야마 · 포스토이나</small></div>
+        <div class="journey-next">🚐 트리에스테 → ✈️ 로마</div>
+      </article>
+      <article class="journey-card rome">
+        <div class="journey-date">2/1–2/3</div>
+        <div class="journey-main"><b>로마</b><small>2박 · 보르게세 · 마지막 산책 · 귀국</small></div>
+        <div class="journey-next">✈️ 인천</div>
+      </article>
+    </div>
+
+    <details class="full-bar-details">
+      <summary>14일 전체 바 일정 보기</summary>
+      <div class="bar-card">
+        <div class="bar-meta">
+          <div class="mini-pill">지역 <span id="barCityCount">0</span>개</div>
+          <div class="mini-pill">14일</div>
+        </div>
+        <div class="bar-board-wrap"><div id="barBoard" class="bar-board"></div></div>
+      </div>
+    </details>
+  </section>
+
+  <section id="cities" class="panel">
+    <div class="section-head">
+      <div><h2>도시별 계획</h2><p>도시별로 볼 것, 할 것, 먹을 것 정리</p></div>
+    </div>
+    <div id="cityGrid" class="city-grid"></div>
+  </section>
+
+  <section id="days" class="panel">
+    <div class="section-head">
+      <div><h2>날짜별 일정</h2><p>날짜와 시간별 일정 입력</p></div>
+    </div>
+    <div id="timeline" class="timeline"></div>
+  </section>
+
+  <section id="mapPanel" class="panel">
+    <div class="section-head">
+      <div><h2>지도 · 동선</h2><p>실제 여행 순서와 이동수단 기준으로 표시</p></div>
+    </div>
+    <div class="flow-card">
+      <div class="flow-title">전체 동선</div>
+      <div class="flow-strip">
+        <div class="flow-place rome">로마<small>1/21~1/24</small></div>
+        <div class="flow-arrow"><b>🚄</b><span>고속열차</span></div>
+        <div class="flow-place tuscany">피렌체 · 토스카나<small>1/24~1/29</small></div>
+        <div class="flow-arrow"><b>🚗 🚄</b><span>아레초 반납 · 기차</span></div>
+        <div class="flow-place venice">베네치아<small>1/29 오후</small></div>
+        <div class="flow-arrow"><b>🚌</b><span>버스</span></div>
+        <div class="flow-place slovenia">슬로베니아<small>1/29 밤~2/1</small></div>
+        <div class="flow-arrow"><b>🚐 ✈️</b><span>트리에스테 경유</span></div>
+        <div class="flow-place rome">로마<small>2/1~2/3</small></div>
+      </div>
+      <div class="flow-note">토스카나 안에서는 1/27 피렌체에서 렌터카를 받아 산지미냐노 → 시에나 → 아시아노 → 피엔차 → White Whale 순으로 이동. 1/29 아레초에서 렌터카를 반납한 뒤 🚄 기차로 Venezia Santa Lucia까지 이동.</div>
+    </div>
+
+    <div class="map-grid">
+      <div class="map-card">
+        <div class="map-legend">
+          <span><i class="legend-line legend-train"></i>기차</span>
+          <span><i class="legend-line legend-car"></i>렌터카/차량</span>
+          <span><i class="legend-line legend-bus"></i>버스</span>
+          <span><i class="legend-line legend-flight"></i>항공</span>
+        </div>
+        <div id="map"></div>
+        <div class="map-help">
+          직선은 실제 도로 모양이 아니라 여행 순서를 보여주는 연결선입니다. 색과 아이콘으로 기차·렌터카·버스·항공 구간을 구분했습니다.
+        </div>
+      </div>
+      <div class="route-card">
+        <div class="route-meta">
+          <div class="meta-box">
+            <div class="k">도시 수</div>
+            <div class="v" id="routeCityCount">0</div>
+          </div>
+          <div class="meta-box">
+            <div class="k">이동 구간</div>
+            <div class="v" id="routeLegCount">0</div>
+          </div>
+          <div class="meta-box">
+            <div class="k">총 직선거리</div>
+            <div class="v" id="routeDistance">0 km</div>
+          </div>
+        </div>
+        <div id="routeList" class="route-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="reservations" class="panel">
+    <div class="section-head">
+      <div><h2>예약 · 예산</h2><p>숙소, 기차, 투어, 식당, 큰 지출 관리</p></div>
+    </div>
+    <div class="reserv-grid">
+      <div class="sheet">
+        <h3>예약</h3>
+        <div id="reservationRows" class="table"></div>
+        <button class="add-event" style="width:100%;margin-top:10px" onclick="addReservation()">＋ 예약 항목 추가</button>
+      </div>
+      <div class="sheet">
+        <h3>예산</h3>
+        <div id="budgetRows" class="table"></div>
+        <button class="add-event" style="width:100%;margin-top:10px" onclick="addBudget()">＋ 지출 항목 추가</button>
+        <div class="total" id="budgetTotal">합계 ₩0</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">입력 내용은 자동 저장됩니다.</div>
+</div>
+
+
+<dialog id="syncDialog">
+  <div class="modal sync-modal">
+    <div class="sync-modal-head">
+      <div>
+        <div class="eyebrow sync-eyebrow">SHARED TRIP</div>
+        <h3>☁️ 실시간 동기화</h3>
+      </div>
+      <button class="mini" type="button" onclick="closeSyncDialog()">×</button>
+    </div>
+
+    <div id="syncLoggedOut">
+      <p class="sync-desc">각자 이메일로 로그인한 뒤 같은 여행방에 들어오면 일정이 자동으로 동기화됩니더.</p>
+      <div class="field">
+        <label>이메일</label>
+        <input id="syncEmail" type="email" inputmode="email" autocomplete="email" placeholder="example@email.com">
+      </div>
+      <button class="btn dark sync-wide" type="button" onclick="sendMagicLink()">이메일로 로그인 링크 받기</button>
+      <div class="sync-help">메일로 온 링크를 누르면 이 앱으로 다시 돌아옵니더.</div>
+    </div>
+
+    <div id="syncLoggedIn" hidden>
+      <div class="sync-user-card">
+        <div><small>로그인</small><b id="syncUserEmail">-</b></div>
+        <button class="btn ghost" type="button" onclick="signOutSync()">로그아웃</button>
+      </div>
+
+      <div id="syncNoTrip">
+        <div class="sync-choice-grid">
+          <button class="sync-choice" type="button" onclick="createSharedTrip()">
+            <span>＋</span><b>새 여행방 만들기</b><small>현재 이 폰의 일정을 업로드</small>
+          </button>
+          <div class="sync-choice join-choice">
+            <span>↗</span><b>초대코드로 들어가기</b>
+            <input id="inviteCodeInput" maxlength="8" autocomplete="off" placeholder="예: AB12CD">
+            <button class="btn dark" type="button" onclick="joinSharedTrip()">참여</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="syncInTrip" hidden>
+        <div class="sync-connected">
+          <div><small>현재 여행방</small><b id="sharedTripName">이탈리아·슬로베니아 여행</b></div>
+          <span class="sync-live">● LIVE</span>
+        </div>
+        <div class="invite-card">
+          <small>같이 쓸 사람에게 보낼 초대코드</small>
+          <div class="invite-code-row">
+            <strong id="sharedInviteCode">------</strong>
+            <button class="btn" type="button" onclick="copyInviteCode()">복사</button>
+          </div>
+        </div>
+        <div class="sync-help" id="lastSyncText">동기화 준비 중…</div>
+        <button class="btn ghost sync-wide" type="button" onclick="leaveSharedTrip()">이 기기에서 여행방 연결 해제</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="cityDialog">
+  <form method="dialog" class="modal" onsubmit="confirmAddCity(event)">
+    <h3>도시 추가</h3>
+    <div class="field"><label>도시 이름</label><input id="newCityName" placeholder="예: 로마, 피렌체, 베네치아, 나폴리" required></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px">
+      <div class="field"><label>도착일</label><input id="newCityStart" type="date" min="2027-01-21" max="2027-02-03"></div>
+      <div class="field"><label>출발일</label><input id="newCityEnd" type="date" min="2027-01-21" max="2027-02-03"></div>
+    </div>
+    <div class="modal-actions"><button class="btn" value="cancel">취소</button><button class="btn primary" value="default">추가</button></div>
+  </form>
+</dialog>
+
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
+
+<script>
+const STORAGE_KEY = "italyTripPlanner2027_links_v5";
+const TRIP_START = "2027-01-21";
+const TRIP_END = "2027-02-03";
+
+const PALETTE = [
+  "#c64d4d", "#2d8f78", "#5379c2", "#d28a34", "#8a5ccf", "#2993a3",
+  "#ba5e87", "#4d9a41", "#d1622f", "#7961df", "#9a7a44", "#e06a6a"
+];
+
+const REGION_GROUPS = [
+  {
+    id:"rome_start", name:"로마", color:"#c64d4d",
+    startPos:0.0, endPos:3.30,
+    period:"1/21 저녁 ~ 1/24 오전",
+    segments:["로마 핵심관광"]
+  },
+  {
+    id:"tuscany", name:"피렌체 · 토스카나", color:"#2d8f78",
+    startPos:3.30, endPos:8.25,
+    period:"1/24 오후 ~ 1/29 오전",
+    segments:["피렌체","산지미냐노·시에나","아시아노·피엔차·White Whale"]
+  },
+  {
+    id:"venice", name:"베네치아", color:"#5379c2",
+    startPos:8.25, endPos:8.78,
+    period:"1/29 낮",
+    segments:["베네치아"]
+  },
+  {
+    id:"slovenia", name:"슬로베니아", color:"#d28a34",
+    startPos:8.78, endPos:11.55,
+    period:"1/29 밤 ~ 2/1 오전",
+    segments:["류블랴나","블레드","포스토이나·프레드야마"]
+  },
+  {
+    id:"rome_end", name:"로마", color:"#c64d4d",
+    startPos:11.55, endPos:13.25,
+    period:"2/1 저녁 ~ 2/3 새벽",
+    segments:["로마"]
+  }
+];
+
+const TRANSPORT_BARS = [
+  {
+    name:"🚄 고속열차",
+    startPos:3.05, endPos:3.42,
+    label:"1/24 로마 → 피렌체 · 약 1시간 30분"
+  },
+  {
+    name:"🚗 렌터카",
+    startPos:6.28, endPos:8.16,
+    label:"1/27 피렌체 픽업 → 산지미냐노 → 시에나 → 아시아노 → 피엔차 → White Whale → 1/29 아레초 반납"
+  },
+  {
+    name:"🚄 기차",
+    startPos:8.16, endPos:8.55,
+    label:"1/29 아레초 → Venezia Santa Lucia"
+  },
+  {
+    name:"🚌 버스",
+    startPos:8.64, endPos:8.98,
+    label:"1/29 베네치아/메스트레 → 류블랴나"
+  },
+  {
+    name:"🚐 + ✈️",
+    startPos:11.20, endPos:11.72,
+    label:"2/1 류블랴나 → 트리에스테 공항 → 로마"
+  },
+  {
+    name:"🚕",
+    startPos:13.05, endPos:13.28,
+    label:"2/3 로마 숙소 → 피우미치노 공항"
+  }
+];
+
+
+const ROUTE_STOPS = [
+  {name:"로마", date:"1/21~1/24", note:"첫 로마 3박"},
+  {name:"피렌체", date:"1/24~1/27", note:"피렌체 3박"},
+  {name:"산지미냐노", date:"1/27", note:"렌터카 로드트립"},
+  {name:"시에나", date:"1/27~1/28", note:"1박"},
+  {name:"아시아노", date:"1/28", note:"Crete Senesi 드라이브"},
+  {name:"피엔차", date:"1/28~1/29", note:"발도르차 1박"},
+  {name:"화이트웨일", date:"1/28", note:"Bagni San Filippo"},
+  {name:"아레초", date:"1/29", note:"렌터카 반납 · 기차 환승"},
+  {name:"베네치아", date:"1/29", note:"오후 관광 · 무박"},
+  {name:"류블랴나", date:"1/29~2/1", note:"3박 베이스"},
+  {name:"블레드", date:"1/30", note:"당일치기"},
+  {name:"류블랴나", date:"1/30", note:"복귀"},
+  {name:"프레드야마", date:"1/31", note:"당일치기"},
+  {name:"포스토이나", date:"1/31", note:"당일치기"},
+  {name:"류블랴나", date:"1/31", note:"복귀"},
+  {name:"트리에스테 공항", date:"2/1", note:"로마행 항공"},
+  {name:"로마", date:"2/1~2/3", note:"마지막 2박"}
+];
+
+const ROUTE_LEGS = [
+  {from:"로마", to:"피렌체", mode:"🚄", modeName:"고속열차", detail:"약 1시간 30분"},
+  {from:"피렌체", to:"산지미냐노", mode:"🚗", modeName:"렌터카", detail:"토스카나 로드트립 시작"},
+  {from:"산지미냐노", to:"시에나", mode:"🚗", modeName:"렌터카", detail:"시에나 1박"},
+  {from:"시에나", to:"아시아노", mode:"🚗", modeName:"렌터카", detail:"Crete Senesi"},
+  {from:"아시아노", to:"피엔차", mode:"🚗", modeName:"렌터카", detail:"발도르차"},
+  {from:"피엔차", to:"화이트웨일", mode:"🚗", modeName:"렌터카", detail:"Bagni San Filippo"},
+  {from:"화이트웨일", to:"아레초", mode:"🚗", modeName:"렌터카", detail:"아레초에서 편도 반납"},
+  {from:"아레초", to:"베네치아", mode:"🚄", modeName:"기차", detail:"Venezia Santa Lucia 도착"},
+  {from:"베네치아", to:"류블랴나", mode:"🚌", modeName:"버스", detail:"현재 FlixBus 최단 약 2시간 10분"},
+  {from:"류블랴나", to:"블레드", mode:"🚌", modeName:"버스·셔틀", detail:"당일치기"},
+  {from:"블레드", to:"류블랴나", mode:"🚌", modeName:"버스·셔틀", detail:"숙소 복귀"},
+  {from:"류블랴나", to:"프레드야마", mode:"🚐", modeName:"투어·차량", detail:"당일치기"},
+  {from:"프레드야마", to:"포스토이나", mode:"🚐", modeName:"투어·차량", detail:""},
+  {from:"포스토이나", to:"류블랴나", mode:"🚐", modeName:"투어·차량", detail:"숙소 복귀"},
+  {from:"류블랴나", to:"트리에스테 공항", mode:"🚐", modeName:"셔틀·버스", detail:"항공편에 맞춰 이동"},
+  {from:"트리에스테 공항", to:"로마", mode:"✈️", modeName:"항공", detail:"현재 직항 약 1시간 10분"}
+];
+
+const buckets = [
+  ["see","볼 것","🏛"],
+  ["do","할 것","✨"],
+  ["eat","먹을 것","🍝"],
+  ["extra","기타","🛍"]
+];
+
+const CITY_COORDS = {
+  "로마":[41.9028,12.4964], "rome":[41.9028,12.4964], "roma":[41.9028,12.4964],
+  "피렌체":[43.7696,11.2558], "florence":[43.7696,11.2558], "firenze":[43.7696,11.2558],
+  "베네치아":[45.4408,12.3155], "venice":[45.4408,12.3155], "venezia":[45.4408,12.3155],
+  "밀라노":[45.4642,9.1900], "milan":[45.4642,9.1900], "milano":[45.4642,9.1900],
+  "나폴리":[40.8518,14.2681], "naples":[40.8518,14.2681], "napoli":[40.8518,14.2681],
+  "볼로냐":[44.4949,11.3426], "bologna":[44.4949,11.3426],
+  "베로나":[45.4384,10.9916], "verona":[45.4384,10.9916],
+  "피사":[43.7228,10.4017], "pisa":[43.7228,10.4017],
+  "시에나":[43.3188,11.3308], "siena":[43.3188,11.3308],
+  "토리노":[45.0703,7.6869], "turin":[45.0703,7.6869], "torino":[45.0703,7.6869],
+  "제노바":[44.4056,8.9463], "genoa":[44.4056,8.9463], "genova":[44.4056,8.9463],
+  "친퀘테레":[44.1270,9.7093], "cinque terre":[44.1270,9.7093], "몬테로소":[44.1488,9.6544], "monterosso":[44.1488,9.6544],
+  "라스페치아":[44.1025,9.8241], "la spezia":[44.1025,9.8241],
+  "아말피":[40.6340,14.6027], "amalfi":[40.6340,14.6027],
+  "포지타노":[40.6281,14.4849], "positano":[40.6281,14.4849],
+  "소렌토":[40.6263,14.3758], "sorrento":[40.6263,14.3758],
+  "시칠리아":[37.5999,14.0154], "sicily":[37.5999,14.0154], "sicilia":[37.5999,14.0154],
+  "팔레르모":[38.1157,13.3615], "palermo":[38.1157,13.3615],
+  "카타니아":[37.5079,15.0830], "catania":[37.5079,15.0830],
+  "돌로미티":[46.4102,11.8440], "dolomites":[46.4102,11.8440], "dolomiti":[46.4102,11.8440],
+  "볼차노":[46.4983,11.3548], "bolzano":[46.4983,11.3548],
+  "류블랴나":[46.0569,14.5058], "ljubljana":[46.0569,14.5058],
+  "트리에스테":[45.6495,13.7768], "trieste":[45.6495,13.7768],
+  "트리에스테 공항":[45.8275,13.4722], "trieste airport":[45.8275,13.4722],
+  "산지미냐노":[43.4676,11.0432], "san gimignano":[43.4676,11.0432],
+  "아시아노":[43.2354,11.5764], "asciano":[43.2354,11.5764],
+  "아레초":[43.4633,11.8796], "arezzo":[43.4633,11.8796],
+  "피엔차":[43.0775,11.6780], "pienza":[43.0775,11.6780],
+  "화이트웨일":[42.9338,11.7010], "bagni san filippo":[42.9338,11.7010],
+  "판자노":[43.5443,11.3147], "panzano":[43.5443,11.3147],
+  "블레드":[46.3692,14.1136], "bled":[46.3692,14.1136],
+  "프레드야마":[45.8158,14.1273], "predjama":[45.8158,14.1273],
+  "포스토이나":[45.7749,14.2133], "postojna":[45.7749,14.2133]
+};
+
+function uidSeed(seed){ return "seed_" + seed; }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+const tripDates = makeTripDates(TRIP_START, TRIP_END);
+const totalDays = tripDates.length;
+
+const defaultState = {
+  cities: [
+    {
+      id:uidSeed("rome1"), name:"로마", start:"2027-01-21", end:"2027-01-24", color:PALETTE[0],
+      notes:"초반 3박. 로마 핵심 관광을 여기서 대부분 끝내기.",
+      lists:{
+        see:[
+          {id:uidSeed("r1s1"),text:"콜로세움",done:false},
+          {id:uidSeed("r1s1b"),text:"포로 로마노",done:false},
+          {id:uidSeed("r1s1c"),text:"팔라티노 언덕",done:false},
+          {id:uidSeed("r1s2"),text:"바티칸 박물관",done:false},
+          {id:uidSeed("r1s2b"),text:"시스티나 성당",done:false},
+          {id:uidSeed("r1s2c"),text:"성 베드로 대성당",done:false},
+          {id:uidSeed("r1s3"),text:"판테온",done:false},
+          {id:uidSeed("r1s3b"),text:"트레비 분수",done:false},
+          {id:uidSeed("r1s3c"),text:"스페인 광장",done:false},
+          {id:uidSeed("r1s3d"),text:"나보나 광장",done:false}
+        ],
+        do:[
+          {id:uidSeed("r1d1"),text:"1/23 18:00 Andrea Chénier 오페라",done:false},
+          {id:uidSeed("r1d2"),text:"트라스테베레 저녁 산책",done:false}
+        ],
+        eat:[
+          {id:uidSeed("r1e1"),text:"카르보나라 / 카초 에 페페 / 아마트리치아나",done:false},
+          {id:uidSeed("r1e2"),text:"수플리",done:false}
+        ],
+        extra:[]
+      }
+    },
+    {
+      id:uidSeed("florence"), name:"피렌체", start:"2027-01-24", end:"2027-01-27", color:PALETTE[1],
+      notes:"3박. 1/27 아침 렌터카 픽업 후 토스카나 로드트립 시작.",
+      lists:{
+        see:[
+          {id:uidSeed("f1"),text:"산타마리아 델 피오레 대성당(두오모)",done:false},
+          {id:uidSeed("f2"),text:"우피치 미술관",done:false},
+          {id:uidSeed("f3"),text:"아카데미아 미술관 · 다비드상",done:false},
+          {id:uidSeed("f4"),text:"시뇨리아 광장",done:false},
+          {id:uidSeed("f4b"),text:"베키오 다리",done:false},
+          {id:uidSeed("f4c"),text:"미켈란젤로 광장",done:false}
+        ],
+        do:[
+          {id:uidSeed("fd1"),text:"1/25 20:30 Daniil Trifonov 피아노 리사이틀",done:false}
+        ],
+        eat:[
+          {id:uidSeed("fe1"),text:"비스테카 알라 피오렌티나",done:false},
+          {id:uidSeed("fe2"),text:"스키아차타 / 람프레도토",done:false}
+        ],
+        extra:[]
+      }
+    },
+    {
+      id:uidSeed("siena"), name:"시에나", start:"2027-01-27", end:"2027-01-28", color:PALETTE[3],
+      notes:"토스카나 로드트립 1박. 피렌체 → 산지미냐노 → 시에나.",
+      lists:{
+        see:[
+          {id:uidSeed("s1"),text:"산지미냐노 중세 구시가지",done:false},
+          {id:uidSeed("s2"),text:"시에나 캄포 광장",done:false},
+          {id:uidSeed("s3"),text:"시에나 대성당",done:false}
+        ],
+        do:[
+          {id:uidSeed("sd1"),text:"렌터카로 토스카나 로드트립 시작",done:false}
+        ],
+        eat:[],
+        extra:[
+          {id:uidSeed("sx1"),text:"판자노는 시간 남으면 선택 — 우선순위 낮음",done:false}
+        ]
+      }
+    },
+    {
+      id:uidSeed("pienza"), name:"피엔차", start:"2027-01-28", end:"2027-01-29", color:PALETTE[4],
+      notes:"토스카나 로드트립 1박. 아시아노·Crete Senesi·발도르차·White Whale을 묶고, 다음 날 아레초에서 렌터카 반납.",
+      lists:{
+        see:[
+          {id:uidSeed("p1"),text:"아시아노",done:false},
+          {id:uidSeed("p1b"),text:"Crete Senesi",done:false},
+          {id:uidSeed("p2"),text:"피엔차 구시가지",done:false},
+          {id:uidSeed("p2b"),text:"Val d’Orcia 전망",done:false},
+          {id:uidSeed("p3"),text:"Bagni San Filippo",done:false},
+          {id:uidSeed("p3b"),text:"White Whale (Balena Bianca)",done:false}
+        ],
+        do:[
+          {id:uidSeed("pd1"),text:"겨울 천연 온천 체험",done:false}
+        ],
+        eat:[
+          {id:uidSeed("pe1"),text:"페코리노 디 피엔차",done:false}
+        ],
+        extra:[]
+      }
+    },
+    {
+      id:uidSeed("venice"), name:"베네치아", start:"2027-01-29", end:"2027-01-29", color:PALETTE[2],
+      notes:"무박 경유. 피엔차/발도르차에서 아레초까지 렌터카 이동 → 아레초 반납 → 기차로 Venezia Santa Lucia → 베네치아 관광 → 저녁 류블랴나 이동.",
+      lists:{
+        see:[
+          {id:uidSeed("v1"),text:"리알토 다리",done:false},
+          {id:uidSeed("v2"),text:"산마르코 광장",done:false},
+          {id:uidSeed("v2b"),text:"산마르코 대성당",done:false},
+          {id:uidSeed("v3"),text:"두칼레 궁전",done:false}
+        ],
+        do:[
+          {id:uidSeed("vd1"),text:"대운하 바포레토 — 시간 여유 있을 때",done:false}
+        ],
+        eat:[
+          {id:uidSeed("ve1"),text:"치케티 / 바칼라 만테카토",done:false}
+        ],
+        extra:[]
+      }
+    },
+    {
+      id:uidSeed("ljubljana"), name:"류블랴나", start:"2027-01-29", end:"2027-02-01", color:PALETTE[5],
+      notes:"3박. 블레드 1일 + 포스토이나/프레드야마 1일 + 마지막 오전 류블랴나.",
+      lists:{
+        see:[
+          {id:uidSeed("l1"),text:"블레드 호수",done:false},
+          {id:uidSeed("l1b"),text:"블레드 성",done:false},
+          {id:uidSeed("l2"),text:"포스토이나 동굴",done:false},
+          {id:uidSeed("l2b"),text:"프레드야마 성",done:false},
+          {id:uidSeed("l3"),text:"프레셰렌 광장",done:false},
+          {id:uidSeed("l3b"),text:"트리플 브리지",done:false},
+          {id:uidSeed("l3c"),text:"용의 다리",done:false},
+          {id:uidSeed("l3d"),text:"류블랴나 성",done:false}
+        ],
+        do:[
+          {id:uidSeed("ld1"),text:"블레드 크림 케이크 먹기",done:false}
+        ],
+        eat:[],
+        extra:[
+          {id:uidSeed("lx1"),text:"1/30 Carmen 공연 후보 — 티켓 일정 확인",done:false}
+        ]
+      }
+    },
+    {
+      id:uidSeed("rome2"), name:"로마", start:"2027-02-01", end:"2027-02-03", color:PALETTE[0],
+      notes:"마지막 2박. 핵심 관광은 이미 끝났으므로 여유·보르게세·쇼핑 위주.",
+      lists:{
+        see:[
+          {id:uidSeed("r2s1"),text:"보르게세 미술관",done:false},
+          {id:uidSeed("r2s1b"),text:"보르게세 공원",done:false},
+          {id:uidSeed("r2s2"),text:"포폴로 광장",done:false},
+          {id:uidSeed("r2s2b"),text:"핀초 언덕",done:false},
+          {id:uidSeed("r2s2c"),text:"비아 델 코르소",done:false}
+        ],
+        do:[
+          {id:uidSeed("r2d1"),text:"마지막 밤 트레비 분수 · 스페인 광장",done:false}
+        ],
+        eat:[
+          {id:uidSeed("r2e1"),text:"마리토초",done:false}
+        ],
+        extra:[
+          {id:uidSeed("r2x1"),text:"2/3 07:00 출발 — 공항 이동 매우 이른 시간",done:false}
+        ]
+      }
+    }
+  ],
+  days: [
+    {date:"2027-01-21", city:"로마", day:1, events:[
+      {id:uidSeed("d1a"),time:"17:00",type:"이동",title:"로마 도착 · 숙소 체크인"},
+      {id:uidSeed("d1b"),time:"19:30",type:"관광",title:"나보나 광장 → 판테온 → 트레비 분수 → 스페인 광장"}
+    ]},
+    {date:"2027-01-22", city:"로마", day:2, events:[
+      {id:uidSeed("d2a"),time:"09:00",type:"관광",title:"콜로세움 → 포로 로마노 → 팔라티노 언덕"},
+      {id:uidSeed("d2b"),time:"15:00",type:"관광",title:"베네치아 광장 → 비토리오 에마누엘레 2세 기념관 → 캄피돌리오"},
+      {id:uidSeed("d2c"),time:"19:00",type:"식사",title:"몬티 지구 저녁"}
+    ]},
+    {date:"2027-01-23", city:"로마", day:3, events:[
+      {id:uidSeed("d3a"),time:"09:00",type:"관광",title:"바티칸 박물관 → 시스티나 성당"},
+      {id:uidSeed("d3b"),time:"13:30",type:"관광",title:"성 베드로 대성당 → 성 베드로 광장 → 산탄젤로 성"},
+      {id:uidSeed("d3c"),time:"18:00",type:"예약",title:"Teatro dell'Opera di Roma · Andrea Chénier"}
+    ]},
+    {date:"2027-01-24", city:"피렌체", day:4, events:[
+      {id:uidSeed("d4a"),time:"09:30",type:"이동",title:"로마 → 피렌체 고속열차"},
+      {id:uidSeed("d4b"),time:"12:00",type:"관광",title:"두오모 → 공화국 광장 → 시뇨리아 광장 → 베키오 다리"},
+      {id:uidSeed("d4c"),time:"17:00",type:"관광",title:"미켈란젤로 광장 일몰"}
+    ]},
+    {date:"2027-01-25", city:"피렌체", day:5, events:[
+      {id:uidSeed("d5a"),time:"10:00",type:"관광",title:"산타 크로체 · 올트라르노 · 피렌체 여유 일정"},
+      {id:uidSeed("d5b"),time:"20:30",type:"예약",title:"Teatro Verdi · Daniil Trifonov 피아노 리사이틀"}
+    ]},
+    {date:"2027-01-26", city:"피렌체", day:6, events:[
+      {id:uidSeed("d6a"),time:"09:00",type:"관광",title:"우피치 미술관"},
+      {id:uidSeed("d6b"),time:"14:00",type:"관광",title:"아카데미아 미술관 · 다비드상"},
+      {id:uidSeed("d6c"),time:"17:00",type:"관광",title:"두오모 복합단지 / 베키오 궁전 중 선택"}
+    ]},
+    {date:"2027-01-27", city:"시에나", day:7, events:[
+      {id:uidSeed("d7a"),time:"08:30",type:"이동",title:"피렌체 렌터카 픽업"},
+      {id:uidSeed("d7b"),time:"10:30",type:"관광",title:"산지미냐노 중세 구시가지"},
+      {id:uidSeed("d7c"),time:"15:30",type:"관광",title:"시에나 · 캄포 광장 · 시에나 대성당"},
+      {id:uidSeed("d7d"),time:"19:00",type:"숙박",title:"시에나 1박"}
+    ]},
+    {date:"2027-01-28", city:"피엔차", day:8, events:[
+      {id:uidSeed("d8a"),time:"09:00",type:"이동",title:"시에나 → 아시아노 → Crete Senesi 드라이브"},
+      {id:uidSeed("d8b"),time:"12:00",type:"관광",title:"피엔차 · 발도르차 전망 · 점심"},
+      {id:uidSeed("d8c"),time:"15:30",type:"관광",title:"Bagni San Filippo · White Whale 온천"},
+      {id:uidSeed("d8d"),time:"19:00",type:"숙박",title:"피엔차/발도르차 1박"}
+    ]},
+    {date:"2027-01-29", city:"베네치아 → 류블랴나", day:9, events:[
+      {id:uidSeed("d9a"),time:"07:30",type:"이동",title:"피엔차/발도르차 → 아레초 · 렌터카 이동"},
+      {id:uidSeed("d9a2"),time:"09:30",type:"이동",title:"아레초 렌터카 반납 → Arezzo역 이동"},
+      {id:uidSeed("d9a3"),time:"10:30",type:"이동",title:"아레초 → Venezia Santa Lucia · 기차"},
+      {id:uidSeed("d9b"),time:"14:00",type:"관광",title:"리알토 다리 → 산마르코 광장 → 산마르코 대성당"},
+      {id:uidSeed("d9c"),time:"18:30",type:"이동",title:"베네치아/메스트레 → 류블랴나 · 버스"},
+      {id:uidSeed("d9d"),time:"21:00",type:"숙박",title:"류블랴나 체크인"}
+    ]},
+    {date:"2027-01-30", city:"류블랴나", day:10, events:[
+      {id:uidSeed("d10a"),time:"09:00",type:"관광",title:"블레드 호수 → 블레드 성"},
+      {id:uidSeed("d10b"),time:"14:00",type:"카페",title:"블레드 크림 케이크"},
+      {id:uidSeed("d10c"),time:"18:00",type:"예약",title:"Carmen 공연 후보 — 티켓 일정 확정 시 반영"}
+    ]},
+    {date:"2027-01-31", city:"류블랴나", day:11, events:[
+      {id:uidSeed("d11a"),time:"09:00",type:"관광",title:"프레드야마 성"},
+      {id:uidSeed("d11b"),time:"13:00",type:"관광",title:"포스토이나 동굴"}
+    ]},
+    {date:"2027-02-01", city:"류블랴나 → 로마", day:12, events:[
+      {id:uidSeed("d12a"),time:"09:00",type:"관광",title:"프레셰렌 광장 → 트리플 브리지 → 용의 다리 → 류블랴나 성"},
+      {id:uidSeed("d12b"),time:"14:00",type:"이동",title:"류블랴나 → 트리에스테 공항 → 로마 이동 후보"},
+      {id:uidSeed("d12c"),time:"20:00",type:"식사",title:"로마 도착 후 저녁"}
+    ]},
+    {date:"2027-02-02", city:"로마", day:13, events:[
+      {id:uidSeed("d13a"),time:"10:00",type:"관광",title:"보르게세 미술관 → 보르게세 공원"},
+      {id:uidSeed("d13b"),time:"14:00",type:"관광",title:"포폴로 광장 → 핀초 언덕 → 비아 델 코르소"},
+      {id:uidSeed("d13c"),time:"19:00",type:"관광",title:"스페인 광장 → 트레비 분수 · 마지막 밤"}
+    ]},
+    {date:"2027-02-03", city:"로마 → 인천", day:14, events:[
+      {id:uidSeed("d14a"),time:"03:15",type:"이동",title:"숙소 → 로마 공항"},
+      {id:uidSeed("d14b"),time:"07:00",type:"이동",title:"로마 출발"}
+    ]}
+  ],
+  reservations: [
+    {type:"항공", item:"인천 → 로마", status:"예약 완료", ref:"1/21 11:00"},
+    {type:"공연", item:"Andrea Chénier · Teatro dell'Opera di Roma", status:"티켓 확인 중", ref:"1/23 18:00"},
+    {type:"공연", item:"Daniil Trifonov · Teatro Verdi Firenze", status:"티켓 확인 중", ref:"1/25 20:30"},
+    {type:"기타", item:"피렌체 렌터카 픽업 → 아레초 편도 반납", status:"예약 전", ref:"1/27~1/29"},
+    {type:"기차", item:"Arezzo → Venezia Santa Lucia", status:"시간표 오픈 후 예약", ref:"1/29"},
+    {type:"공연", item:"Carmen · SNG Opera Ljubljana", status:"회차 확인 필요", ref:"1/30 18:00 후보"},
+    {type:"항공", item:"로마 → 인천", status:"예약 완료", ref:"2/3 07:00"}
+  ],
+  budgets: []
+};
+
+let state = load();
+
+function makeTripDates(startIso, endIso){
+  const arr=[];
+  const start = new Date(startIso + "T12:00:00");
+  const end = new Date(endIso + "T12:00:00");
+  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+    arr.push(new Date(d).toISOString().slice(0,10));
+  }
+  return arr;
+}
+function makeDays(){
+  return tripDates.map((date, idx)=>({date, city:"", events:[], day:idx+1}));
+}
+function ensureCityFields(c, idx){
+  if(!c.color) c.color = PALETTE[idx % PALETTE.length];
+  if(!c.lists) c.lists = {see:[],do:[],eat:[],extra:[]};
+  if(typeof c.notes !== "string") c.notes = "";
+  if(!c.start) c.start = tripDates[0];
+  if(!c.end) c.end = c.start;
+  c.start = clampIso(c.start);
+  c.end = clampIso(c.end);
+  if(dateIndex(c.end) < dateIndex(c.start)) c.end = c.start;
+  return c;
+}
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if(s && s.cities && s.days){
+      s.cities = s.cities.map((c, idx)=>ensureCityFields(c, idx));
+      if(!s.reservations) s.reservations = [];
+      if(!s.budgets) s.budgets = [];
+      return s;
+    }
+  }catch(e){}
+  return structuredClone(defaultState);
+}
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  updateStats();
+  scheduleRemoteSave();
+}
+
+function esc(s=""){ return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m])); }
+function cleanPlaceQuery(text){
+  return (text || "")
+    .replace(/[🏛✨🍝🛍🚗🚄🚌✈️🚐🚕]/g," ")
+    .replace(/\s+/g," ")
+    .trim();
+}
+function makePlaceLinks(text, cityName){
+  const q = cleanPlaceQuery(text);
+  if(!q) return "";
+  const full = `${q} ${cityName || ""} Italy`.trim();
+  const enc = encodeURIComponent(full);
+  const photo = `https://www.google.com/search?tbm=isch&q=${enc}`;
+  const maps = `https://www.google.com/maps/search/?api=1&query=${enc}`;
+  const info = `https://www.google.com/search?q=${enc}`;
+  return `
+    <div class="place-links">
+      <a class="place-link" href="${maps}" target="_blank" rel="noopener" title="지도에서 보기">📍</a>
+      <a class="place-link" href="${photo}" target="_blank" rel="noopener" title="사진 보기">🖼</a>
+      <a class="place-link" href="${info}" target="_blank" rel="noopener" title="정보 검색">ℹ️</a>
+    </div>`;
+}
+function fmtDate(iso){
+  if(!iso) return "";
+  const d=new Date(iso+"T12:00:00");
+  const wd=["일","월","화","수","목","금","토"][d.getDay()];
+  return `${d.getMonth()+1}/${d.getDate()} (${wd})`;
+}
+function shortDate(iso){
+  const d=new Date(iso+"T12:00:00");
+  return `${d.getMonth()+1}/${d.getDate()}`;
+}
+function dateIndex(iso){ return tripDates.indexOf(clampIso(iso)); }
+function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+function clampIso(iso){
+  const idx = tripDates.indexOf(iso);
+  if(idx >= 0) return iso;
+  if(iso < tripDates[0]) return tripDates[0];
+  if(iso > tripDates[tripDates.length-1]) return tripDates[tripDates.length-1];
+  return tripDates[0];
+}
+function idxToIso(idx){ return tripDates[clamp(idx,0,totalDays-1)]; }
+function getNextColor(){
+  const used = state.cities.map(c=>c.color);
+  for(const color of PALETTE){
+    if(!used.includes(color)) return color;
+  }
+  return PALETTE[state.cities.length % PALETTE.length];
+}
+function getDisplayColor(city){
+  const n = (city?.name || "").trim();
+  if(["피렌체","시에나","피엔차"].includes(n)) return "#2d8f78";
+  if(n === "베네치아") return "#5379c2";
+  if(n === "류블랴나") return "#d28a34";
+  if(n === "로마") return "#c64d4d";
+  return city?.color || "#999";
+}
+function updateStats(){
+  document.getElementById("cityCount").innerHTML=`도시 <strong>${state.cities.length}곳</strong>`;
+  document.getElementById("barCityCount").textContent = state.cities.length;
+  const now=new Date();
+  const dep=new Date("2027-01-21T11:00:00+09:00");
+  const diff=Math.ceil((dep-now)/86400000);
+  document.getElementById("dday").innerHTML= diff>0 ? `출발까지 <strong>D-${diff}</strong>` : diff===0 ? "<strong>오늘 출발</strong>" : "여행 일정 종료";
+}
+
+function activateTab(tabId, updateHash=true){
+  const btn = document.querySelector(`.tab[data-tab="${tabId}"]`);
+  const panel = document.getElementById(tabId);
+  if(!btn || !panel) return;
+
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+  btn.classList.add("active");
+  panel.classList.add("active");
+
+  if(updateHash && history.replaceState){
+    history.replaceState(null, "", `#${tabId}`);
+  }
+  window.scrollTo({top:0, behavior:"smooth"});
+
+  if(tabId === "mapPanel"){
+    setTimeout(() => { if (map) map.invalidateSize(); renderRouteMap(); }, 80);
+  }
+}
+
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click", ()=>activateTab(btn.dataset.tab));
+});
+
+function openCityDialog(){
+  document.getElementById("newCityName").value="";
+  document.getElementById("newCityStart").value=tripDates[0];
+  document.getElementById("newCityEnd").value=tripDates[0];
+  document.getElementById("cityDialog").showModal();
+  setTimeout(()=>document.getElementById("newCityName").focus(),50);
+}
+function confirmAddCity(e){
+  e.preventDefault();
+  const name=document.getElementById("newCityName").value.trim();
+  if(!name) return;
+  let start = clampIso(document.getElementById("newCityStart").value || tripDates[0]);
+  let end = clampIso(document.getElementById("newCityEnd").value || start);
+  if(dateIndex(end) < dateIndex(start)) end = start;
+
+  const existing = state.cities.find(c=>c.name.trim() === name.trim());
+  const color = existing ? existing.color : getNextColor();
+
+  state.cities.push({
+    id:uid(), name, start, end, color, notes:"",
+    lists:{see:[],do:[],eat:[],extra:[]}
+  });
+  save(); renderAll(); document.getElementById("cityDialog").close();
+}
+function deleteCity(id){
+  if(!confirm("이 도시를 삭제할까요?")) return;
+  state.cities=state.cities.filter(c=>c.id!==id);
+  save(); renderAll();
+}
+function updateCity(id,key,val){
+  const c=state.cities.find(c=>c.id===id); if(!c)return;
+  if(key === "start" || key === "end"){
+    c[key] = clampIso(val || tripDates[0]);
+    if(dateIndex(c.end) < dateIndex(c.start)){
+      if(key === "start") c.end = c.start;
+      else c.start = c.end;
+    }
+  } else {
+    c[key]=val;
+  }
+  save();
+  renderBars();
+  renderRouteMap();
+}
+function addBucketItem(cityId,bucket){
+  const c=state.cities.find(c=>c.id===cityId); if(!c)return;
+  c.lists[bucket].push({id:uid(),text:"",done:false});
+  save(); renderCities();
+  setTimeout(()=>{
+    const el=document.querySelector(`[data-item="${c.lists[bucket].at(-1).id}"]`);
+    if(el) el.focus();
+  },0);
+}
+function updateBucketItem(cityId,bucket,itemId,key,val){
+  const c=state.cities.find(c=>c.id===cityId); const it=c?.lists[bucket].find(x=>x.id===itemId);
+  if(it){it[key]=val;save();}
+}
+function removeBucketItem(cityId,bucket,itemId){
+  const c=state.cities.find(c=>c.id===cityId); if(!c)return;
+  c.lists[bucket]=c.lists[bucket].filter(x=>x.id!==itemId); save(); renderCities();
+}
+
+function toggleCityCard(btn){
+  const card = btn.closest(".city-card");
+  if(!card) return;
+  card.classList.toggle("mobile-collapsed");
+}
+
+function renderCities(){
+  const g=document.getElementById("cityGrid");
+  if(!state.cities.length){
+    g.innerHTML=`<div class="empty" style="grid-column:1/-1"><b>도시가 없습니다.</b><br><br>‘도시 추가’ 버튼으로 시작하세요.</div>`;
+    updateStats();
+    return;
+  }
+  g.innerHTML=state.cities.map((c,idx)=>`
+    <article class="city-card ${idx===0?"":"mobile-collapsed"}" style="--cityColor:${getDisplayColor(c)}">
+      <div class="city-top">
+        <div class="city-chip"></div>
+        <input class="city-name" value="${esc(c.name)}" onchange="updateCity('${c.id}','name',this.value)" />
+        <span class="city-range">${(c.start||'').slice(5).replace('-', '/')}–${(c.end||'').slice(5).replace('-', '/')}</span>
+        <button class="city-collapse" type="button" title="접기/펼치기" aria-label="접기/펼치기" onclick="toggleCityCard(this)">⌃</button>
+        <button class="mini danger" title="도시 삭제" onclick="deleteCity('${c.id}')">×</button>
+      </div>
+      <div class="city-body">
+      <div class="city-meta">
+        <div class="field"><label>도착일</label><input type="date" min="${TRIP_START}" max="${TRIP_END}" value="${c.start||""}" onchange="updateCity('${c.id}','start',this.value)"></div>
+        <div class="field"><label>출발일</label><input type="date" min="${TRIP_START}" max="${TRIP_END}" value="${c.end||""}" onchange="updateCity('${c.id}','end',this.value)"></div>
+      </div>
+      <div class="buckets">
+        ${buckets.map(([key,title,icon])=>`
+          <div class="bucket">
+            <h3>${title}<span>${icon}</span></h3>
+            ${c.lists[key].map(it=>`
+              <div class="item-row ${key==="see" && it.text ? "has-links" : ""}">
+                <input type="checkbox" ${it.done?"checked":""} onchange="updateBucketItem('${c.id}','${key}','${it.id}','done',this.checked)">
+                <input class="item-text" data-item="${it.id}" value="${esc(it.text)}" placeholder="입력" onchange="updateBucketItem('${c.id}','${key}','${it.id}','text',this.value)">
+                ${key==="see" && it.text ? makePlaceLinks(it.text,c.name) : ""}
+                <button class="mini" onclick="removeBucketItem('${c.id}','${key}','${it.id}')">×</button>
+              </div>`).join("")}
+            <button class="add-event" style="width:100%" onclick="addBucketItem('${c.id}','${key}')">＋ 추가</button>
+          </div>`).join("")}
+      </div>
+      <div class="notes field"><label>메모</label><textarea placeholder="숙소 위치, 이동 팁, 예약 메모" onchange="updateCity('${c.id}','notes',this.value)">${esc(c.notes||"")}</textarea></div>
+      </div>
+    </article>`).join("");
+  updateStats();
+}
+
+function renderBars(){
+  const board = document.getElementById("barBoard");
+
+  const head = `
+    <div class="bar-head">
+      <div class="blank"></div>
+      ${tripDates.map(date=>{
+        const d = new Date(date + "T12:00:00");
+        const wd = ["일","월","화","수","목","금","토"][d.getDay()];
+        return `<div class="bar-date">${d.getMonth()+1}/${d.getDate()}<small>${wd}</small></div>`;
+      }).join("")}
+    </div>
+  `;
+
+  const regionRows = REGION_GROUPS.map(group=>{
+    const left = `calc(${group.startPos} * var(--dayW) + 6px)`;
+    const width = `calc(${group.endPos - group.startPos} * var(--dayW) - 12px)`;
+    const segWidth = 100 / group.segments.length;
+
+    return `
+      <div class="bar-row region-row">
+        <div class="bar-row-label" style="--cityColor:${group.color}">
+          <span class="dot"></span>
+          <span>${esc(group.name)}</span>
+        </div>
+        <div class="bar-grid">
+          <div class="bar-track">
+            <div class="region-bar" style="left:${left}; width:${width}; background:${group.color}" title="${esc(group.period)}">
+              <div class="region-title">${esc(group.name)} · ${esc(group.period)}</div>
+              ${group.segments.map(seg=>`<div class="region-segment" style="width:${segWidth}%">${esc(seg)}</div>`).join("")}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const transportRows = TRANSPORT_BARS.map(t=>{
+    const left = `calc(${t.startPos} * var(--dayW) + 6px)`;
+    const width = `calc(${Math.max(t.endPos - t.startPos, .22)} * var(--dayW) - 4px)`;
+    return `
+      <div class="bar-row transport-row">
+        <div class="bar-row-label"><span>${esc(t.name)}</span></div>
+        <div class="bar-grid">
+          <div class="bar-track">
+            <div class="transport-bar" style="left:${left}; width:${width}" title="${esc(t.label)}">
+              ${esc(t.name)}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  board.innerHTML = head + regionRows + transportRows;
+  document.getElementById("barCityCount").textContent = REGION_GROUPS.length;
+  updateStats();
+}
+
+let dragInfo = null;
+
+function getDayWidthPx(){
+  const root = getComputedStyle(document.documentElement).getPropertyValue('--dayW').trim();
+  return parseFloat(root.replace('px','')) || 78;
+}
+function startBarInteraction(e, cityId, action){
+  const city = state.cities.find(c=>c.id===cityId);
+  if(!city) return;
+  const el = document.querySelector(`.city-bar[data-cityid="${cityId}"]`);
+  dragInfo = {
+    cityId,
+    action,
+    startX: e.clientX,
+    origStart: dateIndex(city.start),
+    origEnd: dateIndex(city.end),
+    widthDays: dateIndex(city.end) - dateIndex(city.start) + 1,
+    el
+  };
+  if(el) el.classList.add("dragging");
+  document.addEventListener("pointermove", onBarPointerMove);
+  document.addEventListener("pointerup", endBarInteraction);
+}
+function onBarPointerMove(e){
+  if(!dragInfo) return;
+  const dx = e.clientX - dragInfo.startX;
+  const dayW = getDayWidthPx();
+  const deltaDays = Math.round(dx / dayW);
+
+  const city = state.cities.find(c=>c.id===dragInfo.cityId);
+  if(!city) return;
+
+  let start = dragInfo.origStart;
+  let end = dragInfo.origEnd;
+
+  if(dragInfo.action === "move"){
+    start = clamp(dragInfo.origStart + deltaDays, 0, totalDays - dragInfo.widthDays);
+    end = start + dragInfo.widthDays - 1;
+  } else if(dragInfo.action === "resize-left"){
+    start = clamp(dragInfo.origStart + deltaDays, 0, dragInfo.origEnd);
+    end = dragInfo.origEnd;
+  } else if(dragInfo.action === "resize-right"){
+    start = dragInfo.origStart;
+    end = clamp(dragInfo.origEnd + deltaDays, dragInfo.origStart, totalDays - 1);
+  }
+
+  city.start = idxToIso(start);
+  city.end = idxToIso(end);
+  renderBars();
+  renderCities();
+  renderRouteMap();
+}
+function endBarInteraction(){
+  if(dragInfo?.el) dragInfo.el.classList.remove("dragging");
+  dragInfo = null;
+  document.removeEventListener("pointermove", onBarPointerMove);
+  document.removeEventListener("pointerup", endBarInteraction);
+  save();
+}
+function attachBarInteractions(){
+  document.querySelectorAll(".city-bar").forEach(bar=>{
+    bar.addEventListener("pointerdown", (e)=>{
+      if(e.target.classList.contains("bar-handle")) return;
+      startBarInteraction(e, bar.dataset.cityid, "move");
+    });
+  });
+  document.querySelectorAll(".bar-handle").forEach(handle=>{
+    handle.addEventListener("pointerdown", (e)=>{
+      e.stopPropagation();
+      startBarInteraction(e, handle.dataset.cityid, handle.dataset.action);
+    });
+  });
+}
+
+function addEvent(dayIndex){
+  state.days[dayIndex].events.push({id:uid(),time:"",type:"관광",title:""});
+  save(); renderDays();
+}
+function updateDay(dayIndex,key,val){ state.days[dayIndex][key]=val; save(); }
+function updateEvent(dayIndex,id,key,val){
+  const ev=state.days[dayIndex].events.find(e=>e.id===id); if(ev){ev[key]=val;save();}
+}
+function removeEvent(dayIndex,id){
+  state.days[dayIndex].events=state.days[dayIndex].events.filter(e=>e.id!==id); save(); renderDays();
+}
+function renderDays(){
+  const typeOptions=["관광","식사","카페","이동","숙박","예약","휴식","쇼핑","기타"];
+  document.getElementById("timeline").innerHTML=state.days.map((d,di)=>`
+    <div class="day">
+      <div class="date"><b>D${d.day} · ${fmtDate(d.date)}</b><span>${di===0?"로마 17:00 도착":di===state.days.length-1?"로마 07:00 출발":""}</span></div>
+      <div class="day-city"><input list="cityNames" placeholder="도시" value="${esc(d.city)}" onchange="updateDay(${di},'city',this.value)"></div>
+      <div class="events">
+        ${d.events.map(ev=>`
+          <div class="event">
+            <input type="time" value="${ev.time}" onchange="updateEvent(${di},'${ev.id}','time',this.value)">
+            <select onchange="updateEvent(${di},'${ev.id}','type',this.value)">${typeOptions.map(t=>`<option ${ev.type===t?"selected":""}>${t}</option>`).join("")}</select>
+            <input placeholder="일정 입력" value="${esc(ev.title)}" onchange="updateEvent(${di},'${ev.id}','title',this.value)">
+            <button class="remove" onclick="removeEvent(${di},'${ev.id}')">×</button>
+          </div>`).join("")}
+        <button class="add-event" onclick="addEvent(${di})">＋ 일정 추가</button>
+      </div>
+    </div>`).join("")+`<datalist id="cityNames">${[...new Set(state.cities.map(c=>c.name))].map(c=>`<option value="${esc(c)}">`).join("")}</datalist>`;
+}
+
+function addReservation(){
+  state.reservations.push({type:"숙소",item:"",status:"예약 전",ref:""}); save(); renderReservations();
+}
+function updateReservation(i,key,val){ state.reservations[i][key]=val; save(); }
+function removeReservation(i){ state.reservations.splice(i,1); save(); renderReservations(); }
+function addBudget(){ state.budgets.push({category:"숙소",item:"",amount:0}); save(); renderReservations(); }
+function updateBudget(i,key,val){ state.budgets[i][key]=key==="amount"?Number(val||0):val; save(); renderReservations(); }
+function removeBudget(i){ state.budgets.splice(i,1); save(); renderReservations(); }
+function renderReservations(){
+  const r=document.getElementById("reservationRows");
+  r.innerHTML=state.reservations.map((x,i)=>`
+    <div class="res-row">
+      <select onchange="updateReservation(${i},'type',this.value)">
+        ${["항공","숙소","기차","버스","공연","투어","식당","기타"].map(v=>`<option ${x.type===v?"selected":""}>${v}</option>`).join("")}
+      </select>
+      <input placeholder="예약 항목" value="${esc(x.item)}" onchange="updateReservation(${i},'item',this.value)">
+      <input placeholder="상태 / 메모" value="${esc(x.status)}" onchange="updateReservation(${i},'status',this.value)">
+      <input placeholder="날짜" value="${esc(x.ref)}" onchange="updateReservation(${i},'ref',this.value)">
+      <button class="mini danger" onclick="removeReservation(${i})">×</button>
+    </div>`).join("");
+
+  const b=document.getElementById("budgetRows");
+  b.innerHTML=state.budgets.map((x,i)=>`
+    <div class="money-row">
+      <select onchange="updateBudget(${i},'category',this.value)">
+        ${["항공","숙소","교통","식비","관광","쇼핑","기타"].map(v=>`<option ${x.category===v?"selected":""}>${v}</option>`).join("")}
+      </select>
+      <input placeholder="항목" value="${esc(x.item)}" onchange="updateBudget(${i},'item',this.value)">
+      <input type="number" min="0" step="1000" value="${x.amount||""}" placeholder="원" onchange="updateBudget(${i},'amount',this.value)">
+      <button class="mini danger" onclick="removeBudget(${i})">×</button>
+    </div>`).join("");
+
+  const total=state.budgets.reduce((s,x)=>s+Number(x.amount||0),0);
+  document.getElementById("budgetTotal").textContent=`합계 ₩${total.toLocaleString("ko-KR")}`;
+}
+
+function exportData(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="이탈리아_여행_계획.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function importData(e){
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const s=JSON.parse(rd.result);
+      if(!s.cities || !s.days) throw new Error();
+      s.cities = s.cities.map((c, idx)=>ensureCityFields(c, idx));
+      if(!s.reservations) s.reservations = [];
+      if(!s.budgets) s.budgets = [];
+      state=s; save(); renderAll(); alert("불러왔습니다.");
+    }catch(err){ alert("올바른 파일이 아닙니다."); }
+    e.target.value="";
+  };
+  rd.readAsText(f);
+}
+function resetAll(){
+  if(!confirm("저장된 계획을 전부 초기화할까요?")) return;
+  state=structuredClone(defaultState); save(); renderAll();
+}
+
+function normalizeCityName(name){
+  return (name || "").trim().toLowerCase().replace(/\s+/g," ");
+}
+function getCoords(name){
+  const key = normalizeCityName(name);
+  return CITY_COORDS[key] || null;
+}
+function getOrderedCities(){
+  return [...state.cities].sort((a,b)=>{
+    const av = a.start || "9999-12-31";
+    const bv = b.start || "9999-12-31";
+    if(av === bv) return a.name.localeCompare(b.name, "ko");
+    return av.localeCompare(bv);
+  });
+}
+function haversine(lat1, lon1, lat2, lon2){
+  const R = 6371;
+  const toRad = x => x * Math.PI / 180;
+  const dLat = toRad(lat2-lat1);
+  const dLon = toRad(lon2-lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+let map = null;
+let mapMarkers = [];
+let mapLines = [];
+
+function initMap(){
+  if(map || !window.L) return;
+  map = L.map('map', { zoomControl:true }).setView([42.8, 12.5], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'&copy; OpenStreetMap'
+  }).addTo(map);
+}
+function clearMapLayers(){
+  if(!map) return;
+  mapMarkers.forEach(m=>map.removeLayer(m));
+  mapMarkers = [];
+  mapLines.forEach(line=>map.removeLayer(line));
+  mapLines = [];
+}
+function routeModeStyle(modeName){
+  if(modeName.includes("열차")) return {color:"#5379c2", dash:null};
+  if(modeName.includes("항공")) return {color:"#8a5ccf", dash:"8 8"};
+  if(modeName.includes("버스")) return {color:"#d28a34", dash:"5 6"};
+  return {color:"#2d8f78", dash:null};
+}
+
+function renderRouteMap(){
+  if(!document.getElementById('map')) return;
+  initMap();
+  if(!map) return;
+
+  clearMapLayers();
+
+  const routeListEl = document.getElementById("routeList");
+  const cityCountEl = document.getElementById("routeCityCount");
+  const legCountEl = document.getElementById("routeLegCount");
+  const distEl = document.getElementById("routeDistance");
+
+  const validStops = ROUTE_STOPS.map((s,idx)=>({
+    ...s,
+    idx,
+    coords:getCoords(s.name)
+  })).filter(s=>s.coords);
+
+  cityCountEl.textContent = new Set(ROUTE_STOPS.map(s=>s.name)).size;
+  legCountEl.textContent = ROUTE_LEGS.length;
+
+  let totalDistance = 0;
+  ROUTE_LEGS.forEach(leg=>{
+    const a=getCoords(leg.from), b=getCoords(leg.to);
+    if(a && b) totalDistance += haversine(a[0],a[1],b[0],b[1]);
+  });
+  distEl.textContent = `${Math.round(totalDistance).toLocaleString("ko-KR")} km`;
+
+  routeListEl.innerHTML = ROUTE_LEGS.map((leg,idx)=>`
+    <div class="route-step">
+      <div class="route-step-top">
+        <div><span class="route-step-num">${idx+1}</span></div>
+        <div style="flex:1">
+          <div class="route-city">${esc(leg.from)} → ${esc(leg.to)}</div>
+        </div>
+      </div>
+      <div class="route-transport">
+        <span class="mode-icon">${leg.mode}</span>
+        <span class="mode-name">${esc(leg.modeName)}</span>
+        <span class="mode-detail">${esc(leg.detail || "")}</span>
+      </div>
+    </div>
+  `).join("");
+
+  const uniqueMarkerKey = new Set();
+  validStops.forEach((p) => {
+    const key = `${p.name}-${p.coords[0]}-${p.coords[1]}`;
+    if(uniqueMarkerKey.has(key)) return;
+    uniqueMarkerKey.add(key);
+
+    let fill = "#69727a";
+    if(["로마"].includes(p.name)) fill="#c64d4d";
+    else if(["피렌체","산지미냐노","시에나","아시아노","피엔차","화이트웨일","아레초"].includes(p.name)) fill="#2d8f78";
+    else if(p.name==="베네치아") fill="#5379c2";
+    else if(["류블랴나","블레드","프레드야마","포스토이나"].includes(p.name)) fill="#d28a34";
+    else if(p.name==="트리에스테 공항") fill="#8a5ccf";
+
+    const marker = L.circleMarker(p.coords, {
+      radius: 8,
+      color: "#ffffff",
+      weight: 2,
+      fillColor: fill,
+      fillOpacity: 0.96
+    }).addTo(map);
+    marker.bindPopup(`<b>${p.name}</b><br>${p.date}<br>${p.note}`);
+    mapMarkers.push(marker);
+  });
+
+  ROUTE_LEGS.forEach(leg=>{
+    const a=getCoords(leg.from), b=getCoords(leg.to);
+    if(!a || !b) return;
+    const st=routeModeStyle(leg.modeName);
+    const line=L.polyline([a,b],{
+      color:st.color,
+      weight:4,
+      opacity:.82,
+      dashArray:st.dash
+    }).addTo(map);
+    line.bindTooltip(`${leg.mode} ${leg.modeName}: ${leg.from} → ${leg.to}`);
+    mapLines.push(line);
+  });
+
+  if(validStops.length){
+    const bounds=L.latLngBounds(validStops.map(s=>s.coords));
+    map.fitBounds(bounds.pad(0.22));
+  }
+}
+
+
+const SUPABASE_URL = "https://ewirkquxfsekfbulityf.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV3aXJrcXV4ZnNla2ZidWxpdHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMzEwMTUsImV4cCI6MjEwMzYwNzAxNX0.jntsCbRuE5iWNQByIrBZogoiKJ2eyUFRTS_HSmNqcas";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
+});
+const SYNC_CLIENT_ID = localStorage.getItem("sync_client_id") || crypto.randomUUID();
+localStorage.setItem("sync_client_id", SYNC_CLIENT_ID);
+let syncUser=null, sharedTrip=null, sharedTripSubscription=null, remoteSaveTimer=null, applyingRemoteState=false;
+
+function openSyncDialog(){ document.getElementById("syncDialog").showModal(); refreshSyncUI(); }
+function closeSyncDialog(){ document.getElementById("syncDialog").close(); }
+document.getElementById("syncBtn")?.addEventListener("click", openSyncDialog);
+
+function setSyncStatus(text,mode=""){
+  const el=document.getElementById("syncStatusPill"); if(!el)return;
+  el.textContent=text; el.classList.remove("live","syncing"); if(mode)el.classList.add(mode);
+}
+function refreshSyncUI(){
+  const out=document.getElementById("syncLoggedOut"), inn=document.getElementById("syncLoggedIn");
+  const no=document.getElementById("syncNoTrip"), yes=document.getElementById("syncInTrip"); if(!out||!inn)return;
+  out.hidden=!!syncUser; inn.hidden=!syncUser;
+  if(syncUser){
+    document.getElementById("syncUserEmail").textContent=syncUser.email||"로그인됨";
+    no.hidden=!!sharedTrip; yes.hidden=!sharedTrip;
+    if(sharedTrip){
+      document.getElementById("sharedTripName").textContent=sharedTrip.name||"이탈리아·슬로베니아 여행";
+      document.getElementById("sharedInviteCode").textContent=sharedTrip.invite_code||"------";
+      setSyncStatus("☁️ 실시간 동기화","live");
+    }else setSyncStatus("☁️ 로그인됨");
+  }else setSyncStatus("☁️ 로컬 저장");
+}
+async function sendMagicLink(){
+  const email=document.getElementById("syncEmail").value.trim(); if(!email)return alert("이메일을 입력해주이소.");
+  const redirectTo=location.origin+location.pathname+"#bars";
+  const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:redirectTo}});
+  if(error)return alert("로그인 메일 전송 실패: "+error.message);
+  alert("로그인 링크를 이메일로 보냈심더. 메일에서 링크를 눌러주이소.");
+}
+async function signOutSync(){
+  if(!confirm("이 기기에서 로그아웃할까예?"))return;
+  await unsubscribeSharedTrip(); sharedTrip=null; localStorage.removeItem("shared_trip_id"); await sb.auth.signOut(); syncUser=null; refreshSyncUI();
+}
+function randomInviteCode(){ const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s=""; for(let i=0;i<6;i++)s+=chars[Math.floor(Math.random()*chars.length)]; return s; }
+async function createSharedTrip(){
+  if(!syncUser)return;
+  let trip=null, tripErr=null;
+  for(let tries=0;tries<4;tries++){
+    const r=await sb.from("trips").insert({name:"이탈리아·슬로베니아 여행",invite_code:randomInviteCode(),owner_id:syncUser.id}).select().single();
+    trip=r.data; tripErr=r.error; if(!tripErr)break;
+  }
+  if(tripErr)return alert("여행방 생성 실패: "+tripErr.message);
+  const {error:memberErr}=await sb.from("trip_members").insert({trip_id:trip.id,user_id:syncUser.id,role:"owner"});
+  if(memberErr)return alert("멤버 등록 실패: "+memberErr.message);
+  const {error:stateErr}=await sb.from("trip_state").insert({trip_id:trip.id,state_json:state,updated_by:syncUser.id,updated_client:SYNC_CLIENT_ID});
+  if(stateErr)return alert("일정 업로드 실패: "+stateErr.message);
+  sharedTrip=trip; localStorage.setItem("shared_trip_id",trip.id); await subscribeSharedTrip(); refreshSyncUI();
+  alert("여행방 만들었심더. 초대코드를 같이 쓸 사람에게 보내주이소.");
+}
+async function joinSharedTrip(){
+  if(!syncUser)return;
+  const code=document.getElementById("inviteCodeInput").value.trim().toUpperCase(); if(!code)return alert("초대코드를 입력해주이소.");
+  const {data,error}=await sb.rpc("join_trip_by_code",{p_invite_code:code}); if(error)return alert("참여 실패: "+error.message); if(!data)return alert("초대코드를 확인해주이소.");
+  const {data:trip,error:tripErr}=await sb.from("trips").select("*").eq("id",data).single(); if(tripErr)return alert("여행방 불러오기 실패: "+tripErr.message);
+  sharedTrip=trip; localStorage.setItem("shared_trip_id",trip.id); await loadRemoteState(); await subscribeSharedTrip(); refreshSyncUI(); alert("같은 여행방에 연결됐심더.");
+}
+async function copyInviteCode(){
+  const code=sharedTrip?.invite_code;if(!code)return;
+  try{await navigator.clipboard.writeText(code);alert("초대코드 복사했심더.");}catch(_){prompt("이 코드 복사해주이소.",code);}
+}
+async function leaveSharedTrip(){
+  if(!confirm("이 기기에서만 여행방 연결을 끊을까예? 일정은 폰에 남아있심더."))return;
+  await unsubscribeSharedTrip();sharedTrip=null;localStorage.removeItem("shared_trip_id");refreshSyncUI();
+}
+async function restoreSharedTrip(){
+  if(!syncUser)return; const id=localStorage.getItem("shared_trip_id"); if(!id)return;
+  const {data,error}=await sb.from("trips").select("*").eq("id",id).maybeSingle();
+  if(error||!data){localStorage.removeItem("shared_trip_id");return;}
+  sharedTrip=data; await loadRemoteState(); await subscribeSharedTrip();
+}
+async function loadRemoteState(){
+  if(!sharedTrip)return;
+  const {data,error}=await sb.from("trip_state").select("state_json,updated_at,updated_by,updated_client").eq("trip_id",sharedTrip.id).maybeSingle();
+  if(error||!data?.state_json)return;
+  applyingRemoteState=true; state=data.state_json; localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); renderAll(); applyingRemoteState=false;
+  const t=document.getElementById("lastSyncText");if(t)t.textContent="최신 일정 불러왔심더.";
+}
+function scheduleRemoteSave(){
+  if(applyingRemoteState||!syncUser||!sharedTrip)return;
+  clearTimeout(remoteSaveTimer); setSyncStatus("☁️ 저장 중…","syncing"); remoteSaveTimer=setTimeout(pushRemoteState,650);
+}
+async function pushRemoteState(){
+  if(!syncUser||!sharedTrip||applyingRemoteState)return;
+  const {error}=await sb.from("trip_state").update({state_json:state,updated_by:syncUser.id,updated_client:SYNC_CLIENT_ID,updated_at:new Date().toISOString()}).eq("trip_id",sharedTrip.id);
+  if(error){setSyncStatus("☁️ 동기화 오류");const t=document.getElementById("lastSyncText");if(t)t.textContent="동기화 오류: "+error.message;return;}
+  setSyncStatus("☁️ 실시간 동기화","live");const t=document.getElementById("lastSyncText");if(t)t.textContent="방금 저장됨";
+}
+async function subscribeSharedTrip(){
+  await unsubscribeSharedTrip();if(!sharedTrip)return;
+  sharedTripSubscription=sb.channel("trip-"+sharedTrip.id).on("postgres_changes",{event:"UPDATE",schema:"public",table:"trip_state",filter:"trip_id=eq."+sharedTrip.id},payload=>{
+    const row=payload.new;if(!row?.state_json||row.updated_client===SYNC_CLIENT_ID)return;
+    applyingRemoteState=true;state=row.state_json;localStorage.setItem(STORAGE_KEY,JSON.stringify(state));renderAll();applyingRemoteState=false;
+    setSyncStatus("☁️ 실시간 동기화","live");const t=document.getElementById("lastSyncText");if(t)t.textContent="다른 기기에서 수정된 일정 반영됨";
+  }).subscribe();
+}
+async function unsubscribeSharedTrip(){if(sharedTripSubscription){await sb.removeChannel(sharedTripSubscription);sharedTripSubscription=null;}}
+async function initSupabaseSync(){
+  const {data:{session}}=await sb.auth.getSession();syncUser=session?.user||null;
+  sb.auth.onAuthStateChange(async(_event,s)=>{syncUser=s?.user||null;if(syncUser)await restoreSharedTrip();else{await unsubscribeSharedTrip();sharedTrip=null;}refreshSyncUI();});
+  if(syncUser)await restoreSharedTrip();refreshSyncUI();
+}
+
+function renderAll(){
+  renderBars();
+  renderCities();
+  renderDays();
+  renderReservations();
+  updateStats();
+  renderRouteMap();
+}
+
+renderAll();
+setTimeout(() => { renderRouteMap(); }, 200);
+initSupabaseSync();
+
+let deferredInstallPrompt = null;
+const installBtn = document.getElementById("installBtn");
+
+window.addEventListener("beforeinstallprompt", (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if(installBtn) installBtn.hidden = false;
+});
+
+if(installBtn){
+  installBtn.addEventListener("click", async ()=>{
+    if(deferredInstallPrompt){
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      return;
+    }
+    const isiOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if(isiOS){
+      alert("아이폰은 Safari에서 공유 버튼을 누른 뒤 ‘홈 화면에 추가’를 선택하시면 됩니더.");
+    }else{
+      alert("이 앱은 HTTPS로 올린 뒤 브라우저 메뉴의 ‘앱 설치’ 또는 ‘홈 화면에 추가’에서 설치할 수 있습니더.");
+    }
+  });
+}
+
+function updateNetworkStatus(){
+  const banner = document.getElementById("networkBanner");
+  if(!banner) return;
+  banner.hidden = navigator.onLine;
+}
+window.addEventListener("online", updateNetworkStatus);
+window.addEventListener("offline", updateNetworkStatus);
+updateNetworkStatus();
+
+if("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")){
+  window.addEventListener("load", ()=>{
+    navigator.serviceWorker.register("./sw.js").catch(()=>{});
+  });
+}
+
+window.addEventListener("load", ()=>{
+  const hash = location.hash.replace("#","");
+  if(["bars","cities","days","mapPanel","reservations"].includes(hash)){
+    activateTab(hash, false);
+  }
+});
+
+</script>
+</body>
+</html>
